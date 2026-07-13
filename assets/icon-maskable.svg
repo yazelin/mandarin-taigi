@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">國台語詞語對照</title>
+  <rect width="512" height="512" fill="#1f5b4f"/>
+  <rect x="78" y="78" width="356" height="356" rx="78" fill="#fbfaf4"/>
+  <path d="M78 156h356v88H78z" fill="#f2b94b"/>
+  <text x="256" y="218" fill="#17312b" font-family="Noto Sans CJK TC, sans-serif" font-size="62" font-weight="800" text-anchor="middle">國 ↔ 台</text>
+  <text x="256" y="352" fill="#1f5b4f" font-family="Noto Sans CJK TC, sans-serif" font-size="82" font-weight="800" text-anchor="middle">詞</text>
+  <circle cx="352" cy="336" r="20" fill="#f2b94b"/>
+</svg>

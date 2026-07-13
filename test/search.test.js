@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createSearchIndex, groupComparisons, normalizeRomanization, searchTerms } from "../search.js";
+import {
+  createSearchIndex,
+  groupComparisons,
+  normalizeRomanization,
+  pickSuggestionTerms,
+  searchTerms,
+} from "../search.js";
+import { selectMandarinVoice } from "../speech.js";
 
 const terms = [
   {
@@ -46,4 +53,40 @@ test("groups only identical comparison records and keeps accent labels", () => {
   ]);
   assert.equal(grouped.length, 2);
   assert.deepEqual(grouped[0].accents, ["甲腔", "乙腔"]);
+});
+
+test("random suggestions only include real short Han terms with official audio", () => {
+  const candidates = [
+    ...terms,
+    {
+      id: 3,
+      mandarin: "沒有音檔",
+      comparisons: [{ accent: "臺北偏泉腔", hanji: "無", romanization: "bô" }],
+    },
+    {
+      id: 4,
+      mandarin: "too-long",
+      comparisons: [{ accent: "臺北偏泉腔", hanji: "長", romanization: "tn̂g", audio: "long.mp3" }],
+    },
+    {
+      id: 5,
+      mandarin: "上吊",
+      comparisons: [{ accent: "臺北偏泉腔", hanji: "吊頷", romanization: "tiàu-ām", audio: "5.mp3" }],
+    },
+  ];
+  const selected = pickSuggestionTerms(candidates, 4, () => 0);
+  assert.deepEqual(selected.map((term) => term.mandarin), ["醫院"]);
+});
+
+test("selects a Taiwanese Mandarin voice and never mistakes Cantonese for Mandarin", () => {
+  const taiwaneseMandarin = { lang: "zh-TW", name: "臺灣華語", localService: true };
+  assert.equal(
+    selectMandarinVoice([
+      { lang: "en-US", name: "English", localService: true },
+      { lang: "zh-CN", name: "普通話", localService: true },
+      taiwaneseMandarin,
+    ]),
+    taiwaneseMandarin,
+  );
+  assert.equal(selectMandarinVoice([{ lang: "zh-HK", name: "粵語", localService: true }]), null);
 });

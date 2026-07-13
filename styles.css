@@ -225,6 +225,10 @@ select:disabled {
   opacity: 0.62;
 }
 
+.button[data-speech-state="unavailable"] {
+  cursor: not-allowed;
+}
+
 .button--primary {
   color: white;
   background: var(--leaf);
@@ -261,6 +265,17 @@ select:disabled {
   cursor: pointer;
 }
 
+.suggestion-list {
+  display: contents;
+}
+
+.suggestions .suggestions__shuffle {
+  color: var(--muted);
+  border-style: dashed;
+  background: var(--mint);
+  font-weight: 750;
+}
+
 .search-status {
   min-height: 1.7rem;
   margin: 1rem 0 0;
@@ -278,7 +293,7 @@ select:disabled {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   margin: 0 0 4rem;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -335,6 +350,13 @@ select:disabled {
   margin-bottom: 0;
   font-size: clamp(1.7rem, 4vw, 2.4rem);
   line-height: 1.2;
+}
+
+.result-card__speech-note {
+  max-width: 34rem;
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
 }
 
 .comparison-list {

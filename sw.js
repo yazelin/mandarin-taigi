@@ -1,4 +1,4 @@
-const SHELL_CACHE = "mandarin-taigi-shell-v1";
+const SHELL_CACHE = "mandarin-taigi-shell-v4";
 const AUDIO_CACHE = "mandarin-taigi-audio-v1";
 const SHELL_FILES = [
   "./",
@@ -6,9 +6,15 @@ const SHELL_FILES = [
   "./styles.css",
   "./app.js",
   "./search.js",
+  "./speech.js",
   "./manifest.webmanifest",
   "./assets/icon.svg",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
+  "./assets/icon-maskable-512.png",
+  "./assets/apple-touch-icon.png",
   "./data/dictionary.json",
+  "./data/mandarin-audio.json",
 ];
 
 self.addEventListener("install", (event) => {
@@ -33,7 +39,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (url.pathname.includes("/assets/audio/")) {
+  if (url.pathname.includes("/assets/audio/") || url.pathname.includes("/assets/mandarin-audio/")) {
     event.respondWith(
       caches.open(AUDIO_CACHE).then(async (cache) => {
         const cached = await cache.match(request);

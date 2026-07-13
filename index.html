@@ -4,14 +4,70 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#1f5b4f" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="application-name" content="國台語詞語對照" />
     <meta
       name="description"
-      content="用華語、臺灣台語漢字或臺羅查詞，對照教育部收錄的臺灣台語詞語、腔口與官方發音。無廣告、無 API key，詞庫可離線使用。"
+      content="用華語、臺灣台語漢字或臺羅查詞，對照教育部收錄的臺灣台語詞語、腔口與台語官方發音。無廣告、無 API key，詞庫可離線使用。"
     />
-    <title>國台語詞語對照</title>
+    <title>國台語詞語對照｜查台語漢字、臺羅與官方發音</title>
+    <link rel="canonical" href="https://yazelin.github.io/mandarin-taigi/" />
+    <link rel="sitemap" type="application/xml" href="./sitemap.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_TW" />
+    <meta property="og:site_name" content="國台語詞語對照" />
+    <meta property="og:title" content="國台語詞語對照｜這句國語，台語按怎講？" />
+    <meta
+      property="og:description"
+      content="查華語、台語漢字或臺羅，對照教育部詞語、腔口與台語官方發音。免登入、免 API key、可離線使用。"
+    />
+    <meta property="og:url" content="https://yazelin.github.io/mandarin-taigi/" />
+    <meta
+      property="og:image"
+      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png"
+    />
+    <meta
+      property="og:image:secure_url"
+      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="國台語詞語對照：這句國語，台語按怎講？" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="國台語詞語對照｜這句國語，台語按怎講？" />
+    <meta
+      name="twitter:description"
+      content="教育部詞語、腔口與台語官方發音對照；免登入、免 API key、可離線使用。"
+    />
+    <meta
+      name="twitter:image"
+      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png"
+    />
+    <meta name="twitter:image:alt" content="國台語詞語對照：這句國語，台語按怎講？" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
     <link rel="stylesheet" href="./styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "國台語詞語對照",
+        "url": "https://yazelin.github.io/mandarin-taigi/",
+        "description": "用華語、臺灣台語漢字或臺羅查詞，對照教育部收錄的臺灣台語詞語、腔口與台語官方發音。",
+        "applicationCategory": "ReferenceApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": "zh-Hant-TW",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "TWD"
+        }
+      }
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#main">跳到主要內容</a>
@@ -30,7 +86,7 @@
           <p class="kicker">免登入・免 API key・離線優先</p>
           <h1 id="page-title">這句國語，<br /><span>台語按怎講？</span></h1>
           <p class="hero__intro">
-            查華語詞目，看臺灣台語漢字、臺羅與各地腔口；有精確對應時，還能直接聽教育部官方發音。
+            查華語詞目，看臺灣台語漢字、臺羅與各地腔口；有精確對應時，還能直接聽教育部台語官方發音。
           </p>
         </div>
 
@@ -59,10 +115,8 @@
 
           <div id="suggestions" class="suggestions" aria-label="常用詞範例">
             <span>試著查：</span>
-            <button type="button" data-query="醫院">醫院</button>
-            <button type="button" data-query="朋友">朋友</button>
-            <button type="button" data-query="回家">回家</button>
-            <button type="button" data-query="天氣">天氣</button>
+            <span id="suggestion-list" class="suggestion-list" aria-live="polite"></span>
+            <button id="shuffle-suggestions" class="suggestions__shuffle" type="button" disabled>換一批</button>
           </div>
           <p id="search-status" class="search-status" role="status" aria-live="polite">正在載入官方詞庫…</p>
         </div>
@@ -71,7 +125,8 @@
       <section class="stats" aria-label="詞庫統計">
         <div><strong id="term-count">—</strong><span>華語詞目</span></div>
         <div><strong id="comparison-count">—</strong><span>腔口對照</span></div>
-        <div><strong id="audio-count">—</strong><span>離線發音</span></div>
+        <div><strong id="audio-count">—</strong><span>台語官方發音</span></div>
+        <div><strong id="mandarin-audio-count">—</strong><span>華語官方單字朗讀</span></div>
       </section>
 
       <section id="results" class="results" aria-label="查詢結果"></section>
@@ -81,13 +136,14 @@
           <p class="eyebrow">離線使用</p>
           <h2 id="offline-title">第一次開啟後，沒網路也能查</h2>
           <p>
-            網站與詞庫會自動留在這台裝置。官方發音可逐筆快取，也可以一次下載完整的精確配對音檔包。
+            網站與詞庫會自動留在這台裝置。1,093 個教育部台語發音與 98 個教育部華語單字屬性朗讀可逐筆快取，也能一次下載。
           </p>
+          <p>有精確官方華語單字朗讀時會優先使用；其餘多字詞才改用 Chrome／裝置 voice，裝置沒有華語聲音時會明確停用。</p>
           <p class="fine-print">不會上傳你的查詢紀錄；清除瀏覽器網站資料時，離線內容也會一併移除。</p>
         </div>
         <div class="offline-card__action">
-          <button id="download-audio" class="button button--primary" type="button">準備離線發音</button>
-          <p id="offline-status" role="status" aria-live="polite">詞庫文字會自動離線；音檔需另行下載。</p>
+          <button id="download-audio" class="button button--primary" type="button">準備教育部台語／華語官方離線發音</button>
+          <p id="offline-status" role="status" aria-live="polite">詞庫文字會自動離線；教育部官方音檔需另行下載。</p>
         </div>
       </section>
 
@@ -106,8 +162,15 @@
             <p>同一個華語詞可能有不同地區說法。本站保留資料中的腔口標示，不把某一種說法假裝成唯一答案。</p>
           </article>
           <article>
-            <h3>音檔不是每個腔口都有</h3>
+            <h3>台語音檔不是每個腔口都有</h3>
             <p>播放鍵只出現在漢字與臺羅都能精確配對官方詞條時；官方錄音是主音讀或通行腔。</p>
+          </article>
+          <article>
+            <h3>同類服務參考</h3>
+            <p>
+              想查群眾共編、新興詞語或更多來源，也可使用外部的
+              <a href="https://itaigi.tw/" target="_blank" rel="noreferrer">iTaigi 愛台語 ↗</a>；本站沒有取用或重製其資料。
+            </p>
           </article>
         </div>
       </section>
@@ -115,11 +178,13 @@
 
     <footer class="site-footer">
       <p>
-        資料來源：中華民國教育部
+        台語資料來源：中華民國教育部
         <a href="https://sutian.moe.edu.tw/zh-hant/" target="_blank" rel="noreferrer">《臺灣台語常用詞辭典》</a>。
-        文字與音檔依
+        華語單字屬性聲音來源：中華民國教育部（Ministry of Education, R.O.C.）
+        <a href="https://dict.concised.moe.edu.tw/" target="_blank" rel="noreferrer">《國語辭典簡編本》</a>，版本 2014_20260626。
+        文字與錄音依
         <a href="https://creativecommons.org/licenses/by-nd/3.0/tw/deed.zh-hant" target="_blank" rel="noreferrer">CC BY-ND 3.0 TW</a>
-        授權使用；本站僅轉換資料格式與建立搜尋介面，未修改辭典內容，也不是教育部官方服務。
+        授權使用；本站未修改錄音，也不是教育部官方服務。
       </p>
       <p>資料日期：<span id="source-date">載入中</span>。</p>
     </footer>
@@ -127,7 +192,7 @@
     <aside id="audio-dock" class="audio-dock" aria-label="發音播放控制" hidden>
       <div>
         <strong id="audio-title">臺灣台語發音</strong>
-        <span>教育部官方詞條音檔</span>
+        <span id="audio-source">教育部官方詞條音檔</span>
       </div>
       <audio id="audio-player" controls preload="none"></audio>
       <button id="stop-audio" class="button button--secondary" type="button">關閉</button>

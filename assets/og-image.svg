@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">國台語詞語對照</title>
+  <desc id="desc">這句國語，台語按怎講？免登入、免 API key、可離線使用。</desc>
+  <rect width="1200" height="630" fill="#fbfaf4"/>
+  <circle cx="1080" cy="-10" r="260" fill="#fff1ca"/>
+  <circle cx="112" cy="650" r="190" fill="#dceee5"/>
+
+  <g transform="translate(70 58)">
+    <rect width="174" height="62" rx="17" fill="#1f5b4f"/>
+    <text x="87" y="41" fill="#ffffff" font-family="Noto Sans CJK TC, sans-serif" font-size="29" font-weight="800" text-anchor="middle">國 ↔ 台</text>
+    <text x="194" y="41" fill="#17312b" font-family="Noto Sans CJK TC, sans-serif" font-size="29" font-weight="800">詞語對照</text>
+  </g>
+
+  <g font-family="Noto Sans CJK TC, sans-serif">
+    <text x="70" y="230" fill="#17312b" font-size="68" font-weight="900">這句國語，</text>
+    <text x="70" y="315" fill="#1f5b4f" font-size="76" font-weight="900">台語按怎講？</text>
+    <text x="74" y="378" fill="#52665f" font-size="26" font-weight="500">教育部詞語、腔口與台語官方發音對照</text>
+
+    <g transform="translate(72 434)" fill="#17463d" font-size="21" font-weight="700">
+      <rect x="0" y="0" width="112" height="43" rx="21.5" fill="#dceee5"/>
+      <text x="56" y="29" text-anchor="middle">免登入</text>
+      <rect x="126" y="0" width="154" height="43" rx="21.5" fill="#dceee5"/>
+      <text x="203" y="29" text-anchor="middle">免 API key</text>
+      <rect x="294" y="0" width="132" height="43" rx="21.5" fill="#dceee5"/>
+      <text x="360" y="29" text-anchor="middle">可離線</text>
+    </g>
+
+    <text x="74" y="536" fill="#52665f" font-size="21">982 華語詞目・12,271 腔口對照</text>
+    <text x="74" y="572" fill="#52665f" font-size="21">1,093 台語音・98 華語官方單字朗讀</text>
+  </g>
+
+  <g transform="translate(735 142)" font-family="Noto Sans CJK TC, sans-serif">
+    <rect width="395" height="355" rx="28" fill="#ffffff" stroke="#cfddd6" stroke-width="3"/>
+    <rect x="28" y="29" width="339" height="66" rx="14" fill="#fbfaf4" stroke="#9fb8ae" stroke-width="3"/>
+    <text x="51" y="73" fill="#17312b" font-size="26" font-weight="700">醫院</text>
+    <rect x="285" y="40" width="68" height="44" rx="11" fill="#1f5b4f"/>
+    <text x="319" y="70" fill="#ffffff" font-size="20" font-weight="800" text-anchor="middle">查詞</text>
+
+    <text x="31" y="137" fill="#1f5b4f" font-size="17" font-weight="800" letter-spacing="2">華語詞目</text>
+    <text x="31" y="187" fill="#17312b" font-size="39" font-weight="900">醫院</text>
+    <line x1="31" y1="213" x2="364" y2="213" stroke="#cfddd6" stroke-width="2"/>
+    <text x="31" y="266" fill="#17312b" font-size="35" font-weight="900">病院</text>
+    <text x="31" y="307" fill="#52665f" font-size="23">pīnn-īnn</text>
+    <rect x="243" y="251" width="121" height="54" rx="14" fill="#dceee5" stroke="#cfddd6" stroke-width="2"/>
+    <polygon points="264,268 264,288 280,278" fill="#1f5b4f"/>
+    <text x="291" y="286" fill="#17463d" font-size="20" font-weight="800">聽台語</text>
+  </g>
+
+  <path d="M1089 529c15-17 15-45 0-62M1110 548c27-28 27-75 0-103" fill="none" stroke="#f2b94b" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="1064" cy="498" r="15" fill="#f2b94b"/>
+</svg>

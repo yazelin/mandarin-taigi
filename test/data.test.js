@@ -4,9 +4,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { pickSuggestionTerms } from "../search.js";
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dataPath = resolve(repositoryRoot, "data/dictionary.json");
 const dictionary = JSON.parse(readFileSync(dataPath, "utf8"));
+const mandarinAudioPath = resolve(repositoryRoot, "data/mandarin-audio.json");
+const mandarinAudio = JSON.parse(readFileSync(mandarinAudioPath, "utf8"));
 
 test("generated dictionary metadata matches its rows", () => {
   assert.equal(dictionary.metadata.term_count, dictionary.terms.length);
@@ -38,4 +42,35 @@ test("known official comparison is present without generated fallback text", () 
   assert.ok(hospital);
   assert.ok(hospital.comparisons.some((comparison) => comparison.hanji === "病院"));
   assert.ok(hospital.comparisons.some((comparison) => comparison.romanization === "i-sing-kuán"));
+});
+
+test("homepage can always draw four valid examples from the generated dictionary", () => {
+  const suggestions = pickSuggestionTerms(dictionary.terms, 4, () => 0.25);
+  assert.equal(suggestions.length, 4);
+  assert.equal(new Set(suggestions.map((term) => term.mandarin)).size, 4);
+  for (const term of suggestions) {
+    assert.ok(dictionary.terms.includes(term));
+    assert.ok(term.comparisons.some((comparison) => comparison.audio));
+  }
+});
+
+test("every official Mandarin audio entry is an exact dictionary headword with an unchanged WAV", () => {
+  const dictionaryWords = new Set(dictionary.terms.map((term) => term.mandarin));
+  const entries = Object.entries(mandarinAudio.entries);
+  assert.equal(entries.length, mandarinAudio.metadata.audio_file_count);
+  assert.equal(entries.length, 98);
+
+  const audioPaths = new Set();
+  for (const [word, entry] of entries) {
+    assert.ok(dictionaryWords.has(word), `unknown Mandarin headword ${word}`);
+    assert.equal([...word].length, 1, `official word recording must be a single character: ${word}`);
+    assert.ok(entry.bopomofo);
+    assert.ok(entry.pinyin);
+    const absolutePath = resolve(dirname(mandarinAudioPath), entry.audio);
+    const header = readFileSync(absolutePath).subarray(0, 12);
+    assert.equal(header.subarray(0, 4).toString("ascii"), "RIFF");
+    assert.equal(header.subarray(8, 12).toString("ascii"), "WAVE");
+    audioPaths.add(absolutePath);
+  }
+  assert.equal(audioPaths.size, entries.length);
 });
