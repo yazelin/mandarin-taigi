@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1f5b4f" />
+    <meta
+      name="description"
+      content="用華語、臺灣台語漢字或臺羅查詞，對照教育部收錄的臺灣台語詞語、腔口與官方發音。無廣告、無 API key，詞庫可離線使用。"
+    />
+    <title>國台語詞語對照</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要內容</a>
+
+    <header class="site-header">
+      <a class="brand" href="./" title="回到首頁">
+        <span class="brand__mark" aria-hidden="true">國 ↔ 台</span>
+        <span>詞語對照</span>
+      </a>
+      <a class="header-link" href="#about">資料說明</a>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero__copy">
+          <p class="kicker">免登入・免 API key・離線優先</p>
+          <h1 id="page-title">這句國語，<br /><span>台語按怎講？</span></h1>
+          <p class="hero__intro">
+            查華語詞目，看臺灣台語漢字、臺羅與各地腔口；有精確對應時，還能直接聽教育部官方發音。
+          </p>
+        </div>
+
+        <div class="search-panel">
+          <form id="search-form" class="search-form" role="search">
+            <label for="query">輸入華語、台語漢字或臺羅</label>
+            <div class="search-form__row">
+              <input
+                id="query"
+                name="q"
+                type="search"
+                placeholder="例如：醫院、病院、pīnn-īnn"
+                autocomplete="off"
+                enterkeyhint="search"
+                disabled
+              />
+              <button id="search-submit" class="button button--primary" type="submit" disabled>查詞</button>
+            </div>
+            <div class="filter-row">
+              <label for="accent">腔口</label>
+              <select id="accent" disabled>
+                <option value="">全部腔口</option>
+              </select>
+            </div>
+          </form>
+
+          <div id="suggestions" class="suggestions" aria-label="常用詞範例">
+            <span>試著查：</span>
+            <button type="button" data-query="醫院">醫院</button>
+            <button type="button" data-query="朋友">朋友</button>
+            <button type="button" data-query="回家">回家</button>
+            <button type="button" data-query="天氣">天氣</button>
+          </div>
+          <p id="search-status" class="search-status" role="status" aria-live="polite">正在載入官方詞庫…</p>
+        </div>
+      </section>
+
+      <section class="stats" aria-label="詞庫統計">
+        <div><strong id="term-count">—</strong><span>華語詞目</span></div>
+        <div><strong id="comparison-count">—</strong><span>腔口對照</span></div>
+        <div><strong id="audio-count">—</strong><span>離線發音</span></div>
+      </section>
+
+      <section id="results" class="results" aria-label="查詢結果"></section>
+
+      <section class="offline-card" aria-labelledby="offline-title">
+        <div>
+          <p class="eyebrow">離線使用</p>
+          <h2 id="offline-title">第一次開啟後，沒網路也能查</h2>
+          <p>
+            網站與詞庫會自動留在這台裝置。官方發音可逐筆快取，也可以一次下載完整的精確配對音檔包。
+          </p>
+          <p class="fine-print">不會上傳你的查詢紀錄；清除瀏覽器網站資料時，離線內容也會一併移除。</p>
+        </div>
+        <div class="offline-card__action">
+          <button id="download-audio" class="button button--primary" type="button">準備離線發音</button>
+          <p id="offline-status" role="status" aria-live="polite">詞庫文字會自動離線；音檔需另行下載。</p>
+        </div>
+      </section>
+
+      <section id="about" class="about" aria-labelledby="about-title">
+        <div>
+          <p class="eyebrow">知道它會什麼，也知道它不會什麼</p>
+          <h2 id="about-title">這是對照辭典，不是 AI 翻譯器</h2>
+        </div>
+        <div class="about__grid">
+          <article>
+            <h3>只顯示有根據的答案</h3>
+            <p>結果來自教育部官方「詞彙比較」資料；沒有收錄就誠實說找不到，不會自行編造台語。</p>
+          </article>
+          <article>
+            <h3>腔口保留原樣</h3>
+            <p>同一個華語詞可能有不同地區說法。本站保留資料中的腔口標示，不把某一種說法假裝成唯一答案。</p>
+          </article>
+          <article>
+            <h3>音檔不是每個腔口都有</h3>
+            <p>播放鍵只出現在漢字與臺羅都能精確配對官方詞條時；官方錄音是主音讀或通行腔。</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        資料來源：中華民國教育部
+        <a href="https://sutian.moe.edu.tw/zh-hant/" target="_blank" rel="noreferrer">《臺灣台語常用詞辭典》</a>。
+        文字與音檔依
+        <a href="https://creativecommons.org/licenses/by-nd/3.0/tw/deed.zh-hant" target="_blank" rel="noreferrer">CC BY-ND 3.0 TW</a>
+        授權使用；本站僅轉換資料格式與建立搜尋介面，未修改辭典內容，也不是教育部官方服務。
+      </p>
+      <p>資料日期：<span id="source-date">載入中</span>。</p>
+    </footer>
+
+    <aside id="audio-dock" class="audio-dock" aria-label="發音播放控制" hidden>
+      <div>
+        <strong id="audio-title">臺灣台語發音</strong>
+        <span>教育部官方詞條音檔</span>
+      </div>
+      <audio id="audio-player" controls preload="none"></audio>
+      <button id="stop-audio" class="button button--secondary" type="button">關閉</button>
+    </aside>
+
+    <noscript><p class="noscript">這個查詢工具需要啟用 JavaScript。</p></noscript>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "mandarin-taigi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "離線優先的國語／臺灣台語詞語與唸法對照工具",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 4173"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "國台語詞語對照",
+  "short_name": "國台語對照",
+  "description": "離線優先的華語與臺灣台語詞語、臺羅、腔口及發音對照工具",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbfaf4",
+  "theme_color": "#1f5b4f",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
