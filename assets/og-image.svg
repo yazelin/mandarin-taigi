@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
   <title id="title">國台語詞語對照</title>
-  <desc id="desc">這句國語，台語按怎講？免登入、免 API key、可離線使用。</desc>
+  <desc id="desc">這個詞，台語按怎講？可查詞、玩隨機挑戰並用錯題學習卡複習。</desc>
   <rect width="1200" height="630" fill="#fbfaf4"/>
   <circle cx="1080" cy="-10" r="260" fill="#fff1ca"/>
   <circle cx="112" cy="650" r="190" fill="#dceee5"/>
@@ -12,21 +12,21 @@
   </g>
 
   <g font-family="Noto Sans CJK TC, sans-serif">
-    <text x="70" y="230" fill="#17312b" font-size="68" font-weight="900">這句國語，</text>
+    <text x="70" y="230" fill="#17312b" font-size="68" font-weight="900">這個詞，</text>
     <text x="70" y="315" fill="#1f5b4f" font-size="76" font-weight="900">台語按怎講？</text>
-    <text x="74" y="378" fill="#52665f" font-size="26" font-weight="500">教育部詞語、腔口與台語官方發音對照</text>
+    <text x="74" y="378" fill="#52665f" font-size="26" font-weight="500">查詞・隨機挑戰・錯題學習卡・官方發音</text>
 
     <g transform="translate(72 434)" fill="#17463d" font-size="21" font-weight="700">
       <rect x="0" y="0" width="112" height="43" rx="21.5" fill="#dceee5"/>
       <text x="56" y="29" text-anchor="middle">免登入</text>
-      <rect x="126" y="0" width="154" height="43" rx="21.5" fill="#dceee5"/>
-      <text x="203" y="29" text-anchor="middle">免 API key</text>
-      <rect x="294" y="0" width="132" height="43" rx="21.5" fill="#dceee5"/>
-      <text x="360" y="29" text-anchor="middle">可離線</text>
+      <rect x="126" y="0" width="132" height="43" rx="21.5" fill="#dceee5"/>
+      <text x="192" y="29" text-anchor="middle">可離線</text>
+      <rect x="272" y="0" width="154" height="43" rx="21.5" fill="#dceee5"/>
+      <text x="349" y="29" text-anchor="middle">隨機 10 題</text>
     </g>
 
     <text x="74" y="536" fill="#52665f" font-size="21">982 華語詞目・12,271 腔口對照</text>
-    <text x="74" y="572" fill="#52665f" font-size="21">1,093 台語音・98 華語官方單字朗讀</text>
+    <text x="74" y="572" fill="#52665f" font-size="21">1,093 台語音・本機錯題與學習卡</text>
   </g>
 
   <g transform="translate(735 142)" font-family="Noto Sans CJK TC, sans-serif">

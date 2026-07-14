@@ -1,5 +1,6 @@
 const COMBINING_MARKS = /\p{M}+/gu;
 const SPACING = /[\s\-_]+/g;
+const TONE_NUMBER = /([a-z])(?:[1-9])(?=$|[\s\-_])/g;
 const FRIENDLY_SUGGESTIONS = new Set([
   "醫院",
   "護士",
@@ -58,6 +59,7 @@ export function normalizeRomanization(value = "") {
   return normalizeText(value)
     .normalize("NFD")
     .replace(COMBINING_MARKS, "")
+    .replace(TONE_NUMBER, "$1")
     .replace(/[’'·.]/g, "")
     .replace(SPACING, " ")
     .trim();
@@ -66,12 +68,20 @@ export function normalizeRomanization(value = "") {
 export function createSearchIndex(terms = []) {
   return terms.map((term) => {
     const comparisons = Array.isArray(term.comparisons) ? term.comparisons : [];
+    const indexedComparisons = comparisons.map((comparison, index) => ({
+      index,
+      comparison,
+      accent: normalizeText(comparison.accent),
+      hanji: normalizeText(comparison.hanji),
+      romanization: normalizeRomanization(comparison.romanization),
+    }));
     return {
       term,
       mandarin: normalizeText(term.mandarin),
-      hanji: comparisons.map((item) => normalizeText(item.hanji)),
-      romanization: comparisons.map((item) => normalizeRomanization(item.romanization)),
-      accents: comparisons.map((item) => normalizeText(item.accent)),
+      comparisons: indexedComparisons,
+      hanji: indexedComparisons.map((item) => item.hanji),
+      romanization: indexedComparisons.map((item) => item.romanization),
+      accents: indexedComparisons.map((item) => item.accent),
     };
   });
 }
@@ -84,52 +94,80 @@ function fieldScore(field, query, scores) {
   return 0;
 }
 
-export function searchTerms(index, query, options = {}) {
+export function searchTermsDetailed(index, query, options = {}) {
   const textQuery = normalizeText(query);
   const romanQuery = normalizeRomanization(query);
   const accent = normalizeText(options.accent || "");
   const limit = Number.isInteger(options.limit) ? options.limit : 40;
 
-  if (!textQuery) return [];
+  if (!textQuery) return { results: [], total: 0, truncated: false };
 
   const matches = [];
   for (const item of index) {
     if (accent && !item.accents.includes(accent)) continue;
 
-    let score = fieldScore(item.mandarin, textQuery, {
+    const mandarinScore = fieldScore(item.mandarin, textQuery, {
       exact: 1200,
       prefix: 900,
       contains: 650,
     });
+    let score = mandarinScore;
+    const comparisonMatches = [];
 
-    for (const hanji of item.hanji) {
-      score = Math.max(
-        score,
-        fieldScore(hanji, textQuery, { exact: 1100, prefix: 820, contains: 600 }),
-      );
+    for (const comparison of item.comparisons) {
+      if (accent && comparison.accent !== accent) continue;
+
+      const hanjiScore = fieldScore(comparison.hanji, textQuery, {
+        exact: 1100,
+        prefix: 820,
+        contains: 600,
+      });
+      const romanizationScore = fieldScore(comparison.romanization, romanQuery, {
+        exact: 1050,
+        prefix: 780,
+        contains: 560,
+      });
+      const comparisonScore = Math.max(hanjiScore, romanizationScore);
+
+      if (comparisonScore > 0) {
+        comparisonMatches.push({
+          index: comparison.index,
+          comparison: comparison.comparison,
+          fields: [
+            ...(hanjiScore > 0 ? ["hanji"] : []),
+            ...(romanizationScore > 0 ? ["romanization"] : []),
+          ],
+          score: comparisonScore,
+        });
+        score = Math.max(score, comparisonScore);
+      }
     }
 
-    for (const romanization of item.romanization) {
-      score = Math.max(
+    if (score > 0) {
+      matches.push({
+        term: item.term,
         score,
-        fieldScore(romanization, romanQuery, { exact: 1050, prefix: 780, contains: 560 }),
-      );
+        match: {
+          mandarin: mandarinScore > 0,
+          comparisons: comparisonMatches,
+        },
+      });
     }
-
-    for (const itemAccent of item.accents) {
-      score = Math.max(
-        score,
-        fieldScore(itemAccent, textQuery, { exact: 300, prefix: 220, contains: 150 }),
-      );
-    }
-
-    if (score > 0) matches.push({ term: item.term, score });
   }
 
-  return matches
-    .sort((a, b) => b.score - a.score || a.term.mandarin.localeCompare(b.term.mandarin, "zh-Hant-TW"))
-    .slice(0, limit)
-    .map(({ term }) => term);
+  matches.sort(
+    (a, b) => b.score - a.score || a.term.mandarin.localeCompare(b.term.mandarin, "zh-Hant-TW"),
+  );
+  const results = matches.slice(0, limit);
+  return {
+    results,
+    total: matches.length,
+    truncated: results.length < matches.length,
+  };
+}
+
+export function searchTerms(index, query, options = {}) {
+  return searchTermsDetailed(index, query, options).results.map(({ term }) => term);
 }
 
 export function groupComparisons(comparisons = [], accent = "") {

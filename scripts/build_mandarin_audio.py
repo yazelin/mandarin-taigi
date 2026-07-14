@@ -138,24 +138,31 @@ def select_primary_entries(
             raise MandarinAudioBuildError(f"Duplicate audio mapping for 字詞號 {word_id}")
         audio_by_id[word_id] = row
 
-    candidates: dict[str, list[tuple[int, dict[str, str], dict[str, str]]]] = {}
+    candidates: dict[str, list[dict[str, str]]] = {}
     for row in dictionary_rows:
         word = row.get("字詞名", "")
         if word not in terms:
             continue
-        word_id = _normalized_id(row.get("字詞號", ""))
-        audio_row = audio_by_id.get(word_id)
-        if audio_row is None or audio_row.get("字詞名", "") != word:
-            continue
-        candidates.setdefault(word, []).append(
-            (_pronunciation_order(row.get("多音排序", "")), row, audio_row)
-        )
+        candidates.setdefault(word, []).append(row)
 
     selected: dict[str, dict[str, str]] = {}
     for word, choices in candidates.items():
-        choices.sort(key=lambda item: (item[0], _normalized_id(item[1].get("字詞號", ""))))
-        order, dictionary_row, audio_row = choices[0]
-        if len(choices) > 1 and order != 1:
+        primary_choices = [
+            row for row in choices if _pronunciation_order(row.get("多音排序", "")) == 1
+        ]
+        if len(primary_choices) == 1:
+            dictionary_row = primary_choices[0]
+        elif len(choices) == 1:
+            # The official sheet normally marks sole readings as order 0 (and
+            # occasionally leaves the field empty). They are unambiguous only
+            # when no other source pronunciation exists.
+            dictionary_row = choices[0]
+        else:
+            continue
+
+        word_id = _normalized_id(dictionary_row.get("字詞號", ""))
+        audio_row = audio_by_id.get(word_id)
+        if audio_row is None or audio_row.get("字詞名", "") != word:
             continue
         selected[word] = {
             "id": dictionary_row.get("字詞號", ""),

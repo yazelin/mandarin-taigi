@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
 const canonicalUrl = "https://yazelin.github.io/mandarin-taigi/";
-const ogImageUrl = `${canonicalUrl}assets/og-image.png`;
+const ogImageUrl = `${canonicalUrl}assets/og-image.png?v=2`;
 
 test("homepage exposes complete canonical and social sharing metadata", () => {
   assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl}"`));

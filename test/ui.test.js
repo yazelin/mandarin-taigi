@@ -1,0 +1,71 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { initializeLearning } from "../learning.js";
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const read = (path) => readFileSync(resolve(repositoryRoot, path), "utf8");
+
+test("learning module stays importable as an isolated feature boundary", () => {
+  assert.equal(typeof initializeLearning, "function");
+});
+
+test("homepage exposes all learning routes and split offline audio controls", () => {
+  const html = read("index.html");
+  for (const route of ["dictionary", "challenge", "wrongbook", "flashcards"]) {
+    assert.ok(html.includes(`data-app-view="${route}"`), route);
+  }
+  for (const id of [
+    "learning-view",
+    "install-app",
+    "download-taigi-audio",
+    "download-mandarin-audio",
+    "cancel-audio-download",
+    "clear-offline-audio",
+  ]) {
+    assert.ok(html.includes(`id="${id}"`), id);
+  }
+  assert.equal(html.includes('id="download-audio"'), false);
+});
+
+test("app and worker agree on the persistent audio cache name", () => {
+  const appCache = read("app.js").match(/const AUDIO_CACHE = "([^"]+)"/)?.[1];
+  const workerCache = read("sw.js").match(/const AUDIO_CACHE = "([^"]+)"/)?.[1];
+  const sourceDate = JSON.parse(read("data/dictionary.json")).metadata.source_updated.replaceAll("-", "");
+  const mandarinSource = JSON.parse(read("data/mandarin-audio.json")).metadata.source_version;
+  assert.ok(appCache);
+  assert.equal(workerCache, appCache);
+  assert.ok(appCache.includes(sourceDate), "audio cache must include the dictionary source date");
+  assert.ok(appCache.endsWith(mandarinSource), "audio cache must include the Mandarin audio source version");
+});
+
+test("install manifest provides direct challenge and wrongbook shortcuts", () => {
+  const manifest = JSON.parse(read("manifest.webmanifest"));
+  assert.ok(manifest.shortcuts.some((shortcut) => shortcut.url === "./#challenge"));
+  assert.ok(manifest.shortcuts.some((shortcut) => shortcut.url === "./#wrongbook"));
+});
+
+test("HTML and every module edge use one versioned release URL", () => {
+  const html = read("index.html");
+  const app = read("app.js");
+  const learning = read("learning.js");
+  const worker = read("sw.js");
+  const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
+  const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
+  assert.equal(appRelease, "6");
+  assert.equal(workerRelease, appRelease);
+  assert.match(html, /styles\.css\?v=6/);
+  assert.match(html, /app\.js\?v=6/);
+  for (const module of ["search", "speech", "learning"]) {
+    assert.ok(app.includes(`./${module}.js?v=6`), module);
+  }
+  assert.ok(learning.includes("./quiz.js?v=6"));
+  assert.ok(app.includes("./data/dictionary.json?v=6"));
+  assert.ok(app.includes("./data/mandarin-audio.json?v=6"));
+  assert.ok(app.includes('register("./sw.js")'));
+  assert.ok(app.includes('type: "GET_RELEASE"'));
+  assert.ok(worker.includes('type !== "GET_RELEASE"'));
+});

@@ -25,11 +25,10 @@ export function selectMandarinVoice(voices = []) {
         voice,
         index,
         rank: mandarinLanguageRank(voice?.lang),
-        localRank: voice?.localService === true ? 0 : 1,
       }))
-      .filter((candidate) => Number.isFinite(candidate.rank))
+      .filter((candidate) => Number.isFinite(candidate.rank) && candidate.voice?.localService === true)
       .sort((left, right) =>
-        left.rank - right.rank || left.localRank - right.localRank || left.index - right.index,
+        left.rank - right.rank || left.index - right.index,
       )[0]?.voice || null
   );
 }
