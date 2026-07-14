@@ -36,7 +36,7 @@ the emitted `audio` value is relative to the JSON file:
 
 ```sh
 python3 scripts/build_dictionary.py /path/to/kautian.ods data/.dictionary-canonical.tmp.json \
-  --source-updated 2026-07-14 \
+  --source-updated 2026-07-13 \
   --audio-zip /path/to/sutiau-mp3.zip \
   --audio-output assets/audio
 python3 scripts/build_runtime_data.py data/.dictionary-canonical.tmp.json \
@@ -71,3 +71,7 @@ Run the unit tests from the repository root:
 ```sh
 python3 -m unittest discover -s test -v
 ```
+
+Generating these files is only the build step. Before changing data URLs,
+cache names, or the CDN commit, follow the repository's complete
+[`docs/DATA-RELEASE.md`](../docs/DATA-RELEASE.md) release procedure.

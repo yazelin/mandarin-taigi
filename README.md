@@ -54,6 +54,8 @@ npm run serve
 
 ## 重新產生詞庫
 
+詞庫建置完成不等於可以直接發布。App shell、data cache 與 exact-commit CDN 採獨立版本；維護者與 Agent 必須依照 [資料發布手冊](docs/DATA-RELEASE.md) 的兩個 commit 流程、同步矩陣與上線驗證執行。
+
 不把數百 MB 的官方來源壓縮檔提交進 Git。先下載到暫存位置，再用標準庫腳本產生 JSON，並只抽出可精確配對的 MP3：
 
 ```bash
