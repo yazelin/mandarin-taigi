@@ -5,7 +5,7 @@ import {
   currentWrongCandidates,
   isMastered,
   nextLearningProgress,
-} from "./quiz.js?v=9";
+} from "./quiz.js?v=10";
 
 const STORE_KEY = "mandarin-taigi-learning-v1";
 const STORE_VERSION = 1;
