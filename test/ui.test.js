@@ -71,16 +71,16 @@ test("HTML and every module edge use one versioned release URL", () => {
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "10");
+  assert.equal(appRelease, "11");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /styles\.css\?v=10/);
-  assert.match(html, /app\.js\?v=10/);
+  assert.match(html, /styles\.css\?v=11/);
+  assert.match(html, /app\.js\?v=11/);
   for (const module of ["search", "speech", "learning", "offline"]) {
-    assert.ok(app.includes(`./${module}.js?v=10`), module);
+    assert.ok(app.includes(`./${module}.js?v=11`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=10"));
-  assert.ok(app.includes("./data/dictionary.json?v=10"));
-  assert.ok(app.includes("./data/mandarin-audio.json?v=10"));
+  assert.ok(learning.includes("./quiz.js?v=11"));
+  assert.ok(app.includes("./data/dictionary.json?v=11"));
+  assert.ok(app.includes("./data/mandarin-audio.json?v=11"));
   assert.ok(app.includes('register("./sw.js")'));
   assert.ok(app.includes('type: "GET_RELEASE"'));
   assert.ok(worker.includes('type !== "GET_RELEASE"'));

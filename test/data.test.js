@@ -124,7 +124,7 @@ test("every official Mandarin audio entry is an exact dictionary headword with a
   const dictionaryWords = new Set(dictionary.terms.map((term) => term.mandarin));
   const entries = Object.entries(mandarinAudio.entries);
   assert.equal(entries.length, mandarinAudio.metadata.audio_file_count);
-  assert.equal(entries.length, 98);
+  assert.equal(entries.length, 274);
 
   const audioPaths = new Set();
   for (const [word, entry] of entries) {
