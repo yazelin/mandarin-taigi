@@ -78,28 +78,48 @@ test("install manifest provides direct challenge and wrongbook shortcuts", () =>
   assert.ok(manifest.shortcuts.some((shortcut) => shortcut.url === "./#wrongbook"));
 });
 
-test("HTML and every module edge use one versioned release URL", () => {
+test("the v14 app shell keeps the unchanged v13 dictionary identity", () => {
   const html = read("index.html");
   const app = read("app.js");
   const learning = read("learning.js");
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "13");
+  assert.equal(appRelease, "14");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /styles\.css\?v=13/);
-  assert.match(html, /app\.js\?v=13/);
-  for (const module of ["search", "speech", "learning", "offline", "dictionary-data"]) {
-    assert.ok(app.includes(`./${module}.js?v=13`), module);
+  assert.match(html, /manifest\.webmanifest\?v=14/);
+  assert.match(html, /styles\.css\?v=14/);
+  assert.match(html, /app\.js\?v=14/);
+  for (const module of ["search", "speech", "learning", "offline", "dictionary-data", "data-loader"]) {
+    assert.ok(app.includes(`./${module}.js?v=14`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=13"));
+  assert.ok(learning.includes("./quiz.js?v=14"));
   assert.ok(app.includes("./data/dictionary-core.json?v=13"));
   assert.ok(app.includes("./data/dictionary-details.json?v=13"));
   assert.ok(app.includes("./data/mandarin-audio.json?v=13"));
+  assert.ok(app.includes('const DATA_CACHE = "mandarin-taigi-data-v13"'));
+  assert.ok(worker.includes('const DATA_CACHE = "mandarin-taigi-data-v13"'));
   assert.equal(app.includes("./data/dictionary.json"), false);
   assert.ok(app.includes('register("./sw.js")'));
   assert.ok(app.includes('type: "GET_RELEASE"'));
   assert.ok(worker.includes('type !== "GET_RELEASE"'));
+});
+
+test("dictionary startup is local-first, exact-commit CDN-backed, and durable", () => {
+  const app = read("app.js");
+  const html = read("index.html");
+  const exactCommit = "413c34bc2e4406e1ac5a81f148d84667e3830831";
+
+  assert.ok(app.includes(`cdn.jsdelivr.net/gh/yazelin/mandarin-taigi@${exactCommit}/`));
+  assert.match(app, /canonicalUrl:\s*CORE_DATA_URL,[\s\S]*primaryUrl:\s*CORE_PRIMARY_URL/);
+  assert.match(app, /canonicalUrl:\s*DETAILS_DATA_URL,[\s\S]*primaryUrl:\s*DETAILS_PRIMARY_URL/);
+  assert.match(app, /canonicalUrl:\s*MANDARIN_AUDIO_URL,[\s\S]*primaryUrl:\s*MANDARIN_AUDIO_PRIMARY_URL/);
+  assert.match(app, /legacyCacheNames:\s*LEGACY_DATA_CACHES/);
+  assert.match(app, /source === "cache" \|\| source === "legacy-cache"/);
+  assert.match(app, /requestPersistentStorage\(\)/);
+  assert.match(app, /void ensurePersistentDataStorage\(\)/);
+  assert.match(html, /本機沒有時才下載/);
+  assert.match(html, /介面更新也不會重抓同一版詞庫/);
 });
 
 test("text progress stays separate from optional audio status and has honest states", () => {
@@ -113,7 +133,10 @@ test("text progress stays separate from optional audio status and has honest sta
   assert.ok(app.includes("state.detailsCached"));
   assert.ok(app.includes('compatibility === "current" || compatibility === "installed"'));
   assert.ok(app.includes("lastAnnouncedProgress"));
-  assert.match(app, /state\.coreCachePromise = cacheValidatedResponse[\s\S]{0,200}registerServiceWorker\(\)/);
+  assert.ok(app.includes("pendingCoreBytes"));
+  assert.ok(app.includes("pendingDetailsBytes"));
+  assert.match(app, /state\.pendingCoreBytes[\s\S]*storeDataBytes\(CORE_DATA_URL, state\.pendingCoreBytes, dataCacheOptions\(\)\)/);
+  assert.match(app, /loadValidatedJson\(\{[\s\S]*canonicalUrl:\s*CORE_DATA_URL/);
   assert.ok(html.includes('id="dictionary-load-live"'));
   assert.ok(html.indexOf('id="dictionary-load-progress"') < html.indexOf('id="dictionary-load-live"'));
 });

@@ -1,22 +1,27 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "13";
+const RELEASE_REVISION = "14";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v13";
+const SHELL_CACHE = "mandarin-taigi-shell-v14";
+// Dictionary bytes change independently from the app shell. Keeping this cache
+// on v13 means a UI-only release never forces the same validated JSON to reload.
+const DATA_CACHE = "mandarin-taigi-data-v13";
+const LEGACY_DATA_CACHE = "mandarin-taigi-shell-v13";
 // Keep this in sync with app.js and include both official audio source versions.
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=13",
-  "./app.js?v=13",
-  "./search.js?v=13",
-  "./speech.js?v=13",
-  "./quiz.js?v=13",
-  "./learning.js?v=13",
-  "./offline.js?v=13",
-  "./dictionary-data.js?v=13",
-  "./manifest.webmanifest?v=13",
+  "./styles.css?v=14",
+  "./app.js?v=14",
+  "./search.js?v=14",
+  "./speech.js?v=14",
+  "./quiz.js?v=14",
+  "./learning.js?v=14",
+  "./offline.js?v=14",
+  "./dictionary-data.js?v=14",
+  "./data-loader.js?v=14",
+  "./manifest.webmanifest?v=14",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
@@ -36,8 +41,9 @@ const SCOPE_URL = new URL(self.registration.scope);
 const ROOT_URL = SCOPE_URL.href;
 const INDEX_URL = new URL("index.html", SCOPE_URL).href;
 const SHELL_URLS = new Set(
-  [...SHELL_FILES, ...RUNTIME_DATA_FILES].map((path) => urlWithoutSearchOrHash(new URL(path, SCOPE_URL))),
+  SHELL_FILES.map((path) => urlWithoutSearchOrHash(new URL(path, SCOPE_URL))),
 );
+const DATA_URLS = new Set(RUNTIME_DATA_FILES.map((path) => new URL(path, SCOPE_URL).href));
 
 function urlWithoutSearchOrHash(value) {
   const url = new URL(value);
@@ -67,7 +73,9 @@ function isCacheableShellResponse(url, response) {
 }
 
 function isDataRequest(url) {
-  return url.pathname.startsWith(new URL("data/", SCOPE_URL).pathname) && url.pathname.endsWith(".json");
+  const cleanUrl = new URL(url);
+  cleanUrl.hash = "";
+  return cleanUrl.origin === SCOPE_URL.origin && DATA_URLS.has(cleanUrl.href);
 }
 
 function isAudioRequest(url) {
@@ -77,7 +85,7 @@ function isAudioRequest(url) {
 }
 
 function isShellRequest(url) {
-  return SHELL_URLS.has(urlWithoutSearchOrHash(url));
+  return url.origin === SCOPE_URL.origin && SHELL_URLS.has(urlWithoutSearchOrHash(url));
 }
 
 async function precacheShell() {
@@ -104,14 +112,59 @@ self.addEventListener("install", (event) => {
   event.waitUntil(precacheShell());
 });
 
+function isJsonResponse(response) {
+  const contentType = response?.headers?.get("content-type") || "";
+  return contentType.toLowerCase().split(";", 1)[0].trim() === "application/json";
+}
+
+async function migrateLegacyData(cacheKeys) {
+  if (!cacheKeys.includes(LEGACY_DATA_CACHE)) return true;
+  try {
+    const legacy = await caches.open(LEGACY_DATA_CACHE);
+    const target = await caches.open(DATA_CACHE);
+    let complete = true;
+    for (const path of RUNTIME_DATA_FILES) {
+      const request = new Request(new URL(path, SCOPE_URL));
+      if (await target.match(request)) continue;
+      const response = await legacy.match(request);
+      if (!response || !isCacheableResponse(response) || !isJsonResponse(response)) {
+        complete = false;
+        continue;
+      }
+      try {
+        await target.put(request, response);
+      } catch {
+        complete = false;
+      }
+    }
+    if (complete) {
+      for (const path of RUNTIME_DATA_FILES) {
+        if (!(await target.match(new Request(new URL(path, SCOPE_URL))))) return false;
+      }
+    }
+    return complete;
+  } catch {
+    return false;
+  }
+}
+
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
+      // v13 mixed shell and validated data in one cache. Copy all three data
+      // payloads first; if any copy fails, retain the legacy cache so the v14
+      // page can still validate and use it without a network request.
+      const legacyMigrated = await migrateLegacyData(keys);
       await Promise.all(
         keys
           .filter(
-            (key) => key.startsWith(CACHE_PREFIX) && key !== SHELL_CACHE && key !== AUDIO_CACHE,
+            (key) =>
+              key.startsWith(CACHE_PREFIX) &&
+              key !== SHELL_CACHE &&
+              key !== DATA_CACHE &&
+              key !== AUDIO_CACHE &&
+              (key !== LEGACY_DATA_CACHE || legacyMigrated),
           )
           .map((key) => caches.delete(key)),
       );
@@ -122,7 +175,11 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type !== "GET_RELEASE") return;
-  event.ports?.[0]?.postMessage({ release: RELEASE_REVISION, audioCache: AUDIO_CACHE });
+  event.ports?.[0]?.postMessage({
+    release: RELEASE_REVISION,
+    audioCache: AUDIO_CACHE,
+    dataCache: DATA_CACHE,
+  });
 });
 
 async function matchBestEffort(cacheName, request) {
@@ -159,19 +216,14 @@ async function handleNavigation(request, url) {
   return cached || fetch(request, { cache: "no-cache" });
 }
 
-async function networkFirstData(event, request) {
-
-  try {
-    const response = await fetch(request, { cache: "no-cache" });
-    if (isCacheableResponse(response)) {
-      keepAlive(event, putBestEffort(SHELL_CACHE, request, response.clone()));
-    }
-    return response;
-  } catch (error) {
-    const cached = await matchBestEffort(SHELL_CACHE, request);
-    if (cached) return cached;
-    throw error;
-  }
+async function cacheFirstData(request) {
+  const cached =
+    (await matchBestEffort(DATA_CACHE, request)) ||
+    (await matchBestEffort(LEGACY_DATA_CACHE, request));
+  if (cached) return cached;
+  // app.js validates the core/details revision pair and Mandarin index before
+  // writing the exact bytes to DATA_CACHE. The worker must not cache raw JSON.
+  return fetch(request, { cache: "no-cache" });
 }
 
 async function rangedResponse(request, response) {
@@ -266,6 +318,6 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isDataRequest(url)) {
-    event.respondWith(networkFirstData(event, request));
+    event.respondWith(cacheFirstData(request));
   }
 });

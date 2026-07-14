@@ -8,7 +8,9 @@ import vm from "node:vm";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerSource = readFileSync(resolve(repositoryRoot, "sw.js"), "utf8");
 const scope = "https://example.test/mandarin-taigi/";
-const shellCache = "mandarin-taigi-shell-v13";
+const shellCache = "mandarin-taigi-shell-v14";
+const dataCache = "mandarin-taigi-data-v13";
+const legacyShellCache = "mandarin-taigi-shell-v13";
 const audioCache = "mandarin-taigi-audio-20260713-2014_20260626";
 
 function cacheKey(input) {
@@ -17,7 +19,7 @@ function cacheKey(input) {
   return url.href;
 }
 
-function createWorker(fetchImplementation, { openFails = false, putFails = false } = {}) {
+function createWorker(fetchImplementation, { openFails = false, putFails = false, putFailure = null } = {}) {
   const listeners = new Map();
   const stores = new Map();
   const puts = [];
@@ -35,9 +37,15 @@ function createWorker(fetchImplementation, { openFails = false, putFails = false
       return response?.clone();
     },
     async put(request, response) {
-      if (putFails) throw Object.assign(new Error("cache quota unavailable"), { name: "QuotaExceededError" });
-      puts.push({ name, key: cacheKey(request) });
-      getStore(name).set(cacheKey(request), response.clone());
+      const key = cacheKey(request);
+      if (putFails || putFailure?.({ name, key })) {
+        throw Object.assign(new Error("cache quota unavailable"), { name: "QuotaExceededError" });
+      }
+      puts.push({ name, key });
+      getStore(name).set(key, response.clone());
+    },
+    async delete(request) {
+      return getStore(name).delete(cacheKey(request));
     },
   });
 
@@ -93,6 +101,9 @@ function createWorker(fetchImplementation, { openFails = false, putFails = false
     seed(name, url, body, init) {
       getStore(name).set(cacheKey(url), new Response(body, init));
     },
+    cached(name, url) {
+      return getStore(name).get(cacheKey(url));
+    },
     async cachedText(name, url) {
       const response = getStore(name).get(cacheKey(url));
       return response ? response.clone().text() : undefined;
@@ -125,6 +136,15 @@ function createWorker(fetchImplementation, { openFails = false, putFails = false
       });
       await Promise.all(lifetimePromises);
     },
+    async dispatchInstall() {
+      const lifetimePromises = [];
+      listeners.get("install")({
+        waitUntil(value) {
+          lifetimePromises.push(Promise.resolve(value));
+        },
+      });
+      await Promise.all(lifetimePromises);
+    },
     dispatchMessage(data) {
       let reply;
       listeners.get("message")({
@@ -136,7 +156,7 @@ function createWorker(fetchImplementation, { openFails = false, putFails = false
   };
 }
 
-test("document and shell assets stay on one immutable release", async (t) => {
+test("the v14 document and shell assets stay on one immutable release", async (t) => {
   const indexUrl = `${scope}index.html`;
 
   await t.test("app navigation uses its installed document without mixing in a deployment", async () => {
@@ -191,17 +211,50 @@ test("an offline hash view falls back to the cached single-page app", async () =
   assert.equal(await response.text(), "offline quiz");
 });
 
-test("versioned dictionary data stays immutable with its app shell", async () => {
+test("validated v13 dictionary data is served cache-first from its stable data cache", async () => {
   const dataUrl = `${scope}data/dictionary-core.json?v=13`;
   const worker = createWorker(async () => new Response('{"version":2}'));
-  worker.seed(shellCache, dataUrl, '{"version":1}', {
+  worker.seed(dataCache, dataUrl, '{"version":1,"validated":true}', {
     headers: { "content-type": "application/json" },
   });
 
   const response = await worker.dispatchFetch(dataUrl);
-  assert.equal(await response.text(), '{"version":1}');
-  assert.equal(await worker.cachedText(shellCache, dataUrl), '{"version":1}');
+  assert.equal(await response.text(), '{"version":1,"validated":true}');
+  assert.equal(await worker.cachedText(dataCache, dataUrl), '{"version":1,"validated":true}');
   assert.equal(worker.fetchCalls.length, 0);
+});
+
+test("uncached v13 dictionary data is not persisted before app validation", async () => {
+  const dataUrl = `${scope}data/dictionary-details.json?v=13`;
+  const worker = createWorker(async () => new Response('{"unvalidated":true}', {
+    headers: { "content-type": "application/json" },
+  }));
+
+  const response = await worker.dispatchFetch(dataUrl);
+  assert.equal(await response.text(), '{"unvalidated":true}');
+  assert.equal(worker.cached(dataCache, dataUrl), undefined);
+  assert.equal(worker.fetchCalls.length, 1);
+});
+
+test("install caches only the v14 app shell and never downloads dictionary payloads", async () => {
+  const worker = createWorker(async (request) => {
+    const url = new URL(request.url);
+    if (url.pathname.endsWith("/") || url.pathname.endsWith("index.html")) {
+      return new Response("<!doctype html>", { headers: { "content-type": "text/html" } });
+    }
+    return new Response("asset", { headers: { "content-type": "application/octet-stream" } });
+  });
+
+  await worker.dispatchInstall();
+
+  const rootCall = worker.fetchCalls.find(([request]) => new URL(request.url).pathname.endsWith("mandarin-taigi/"));
+  assert.equal(rootCall[0].cache, "reload");
+  assert.equal(
+    worker.fetchCalls.some(([request]) => /\/data\/(?:dictionary-(?:core|details)|mandarin-audio)\.json/.test(request.url)),
+    false,
+  );
+  assert.ok(worker.cached(shellCache, `${scope}app.js?v=14`));
+  assert.ok(worker.cached(shellCache, `${scope}data-loader.js?v=14`));
 });
 
 test("audio is cached on demand and served cache-first", async () => {
@@ -251,7 +304,7 @@ test("a cached full audio file satisfies byte-range playback offline", async () 
 });
 
 test("cached versioned shell assets are immutable for the worker lifetime", async () => {
-  const appUrl = `${scope}app.js?v=13`;
+  const appUrl = `${scope}app.js?v=14`;
   const worker = createWorker(async () => new Response("new app", { status: 200 }));
   worker.seed(shellCache, appUrl, "old app", { status: 200 });
 
@@ -278,36 +331,70 @@ test("runtime cache failures never hide successful network responses", async (t)
   }
 });
 
-test("activation removes obsolete managed caches but preserves current audio and unrelated caches", async () => {
+test("activation migrates all three legacy v13 payloads before deleting the old shell", async () => {
   const worker = createWorker(async () => new Response("unused"));
+  const legacyPayloads = [
+    ["dictionary-core.json", '{"core":true}'],
+    ["dictionary-details.json", '{"details":true}'],
+    ["mandarin-audio.json", '{"audio":true}'],
+  ];
+  for (const [file, body] of legacyPayloads) {
+    worker.seed(legacyShellCache, `${scope}data/${file}?v=13`, body, {
+      headers: { "content-type": "application/json" },
+    });
+  }
   worker.seed("mandarin-taigi-shell-v4", `${scope}old.js`, "old");
-  worker.seed(shellCache, `${scope}app.js`, "current");
+  worker.seed(shellCache, `${scope}app.js?v=14`, "current");
   worker.seed("mandarin-taigi-audio-v0", `${scope}assets/audio/old.mp3`, "old audio");
   worker.seed(audioCache, `${scope}assets/audio/current.mp3`, "current audio");
   worker.seed("another-app-cache", `${scope}other`, "other");
 
   await worker.dispatchActivate();
 
-  assert.deepEqual([...worker.stores.keys()].sort(), ["another-app-cache", audioCache, shellCache].sort());
+  for (const [file, body] of legacyPayloads) {
+    assert.equal(await worker.cachedText(dataCache, `${scope}data/${file}?v=13`), body);
+  }
+  assert.deepEqual(
+    [...worker.stores.keys()].sort(),
+    ["another-app-cache", audioCache, dataCache, shellCache].sort(),
+  );
   assert.equal(worker.clientsClaimed, true);
 });
 
-test("worker reports its actual release and audio cache through the update handshake", () => {
+test("activation preserves the legacy shell if even one v13 payload cannot migrate", async () => {
+  const failedKey = `${scope}data/dictionary-details.json?v=13`;
+  const worker = createWorker(async () => new Response("unused"), {
+    putFailure: ({ name, key }) => name === dataCache && key === failedKey,
+  });
+  for (const file of ["dictionary-core.json", "dictionary-details.json", "mandarin-audio.json"]) {
+    worker.seed(legacyShellCache, `${scope}data/${file}?v=13`, `{\"file\":\"${file}\"}`, {
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  await worker.dispatchActivate();
+
+  assert.equal(worker.stores.has(legacyShellCache), true);
+  assert.equal(await worker.cachedText(legacyShellCache, failedKey), '{"file":"dictionary-details.json"}');
+  assert.equal(worker.clientsClaimed, true);
+});
+
+test("worker reports its v14 shell and stable v13 data cache through the update handshake", () => {
   const worker = createWorker(async () => new Response("unused"));
   const reply = worker.dispatchMessage({ type: "GET_RELEASE" });
-  assert.equal(reply.release, "13");
+  assert.equal(reply.release, "14");
   assert.equal(reply.audioCache, audioCache);
+  assert.equal(reply.dataCache, dataCache);
   assert.equal(worker.dispatchMessage({ type: "UNKNOWN" }), undefined);
 });
 
-test("quiz and learning modules are part of the install shell", () => {
-  assert.match(workerSource, /"\.\/quiz\.js\?v=13"/);
-  assert.match(workerSource, /"\.\/learning\.js\?v=13"/);
-  assert.match(workerSource, /"\.\/offline\.js\?v=13"/);
-  assert.match(workerSource, /"\.\/dictionary-data\.js\?v=13"/);
+test("all v14 modules, including the local-first loader, are part of the install shell", () => {
+  for (const module of ["app", "search", "speech", "quiz", "learning", "offline", "dictionary-data", "data-loader"]) {
+    assert.match(workerSource, new RegExp(`"\\.\\/${module}\\.js\\?v=14"`), module);
+  }
 });
 
-test("worker serves validated runtime data but never precaches it itself", () => {
+test("worker recognizes the unchanged v13 data URLs but never precaches them in the shell", () => {
   const shellList = workerSource.match(/const SHELL_FILES = \[([\s\S]*?)\];/)?.[1] || "";
   const runtimeList = workerSource.match(/const RUNTIME_DATA_FILES = \[([\s\S]*?)\];/)?.[1] || "";
   assert.equal(shellList.includes("dictionary-core.json"), false);
@@ -315,4 +402,7 @@ test("worker serves validated runtime data but never precaches it itself", () =>
   assert.equal(shellList.includes("mandarin-audio.json"), false);
   assert.ok(runtimeList.includes("dictionary-core.json?v=13"));
   assert.ok(runtimeList.includes("dictionary-details.json?v=13"));
+  assert.ok(runtimeList.includes("mandarin-audio.json?v=13"));
+  assert.match(workerSource, /const DATA_CACHE = "mandarin-taigi-data-v13"/);
+  assert.match(workerSource, /const LEGACY_DATA_CACHE = "mandarin-taigi-shell-v13"/);
 });
