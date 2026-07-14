@@ -4,21 +4,21 @@ import {
   groupComparisons,
   pickSuggestionTerms,
   searchTermsDetailed,
-} from "./search.js?v=9";
-import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=9";
-import { initializeLearning } from "./learning.js?v=9";
-import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=9";
+} from "./search.js?v=10";
+import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=10";
+import { initializeLearning } from "./learning.js?v=10";
+import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=10";
 
-const RELEASE_REVISION = "9";
-const DATA_URL = "./data/dictionary.json?v=9";
+const RELEASE_REVISION = "10";
+const DATA_URL = "./data/dictionary.json?v=10";
 const DATA_BASE_URL = new URL(DATA_URL, window.location.href);
-const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=9";
+const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=10";
 const MANDARIN_AUDIO_BASE_URL = new URL(MANDARIN_AUDIO_URL, window.location.href);
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const OFFICIAL_ENTRY_URL = "https://sutian.moe.edu.tw/zh-hant/su/";
 const AUDIO_PACKS = {
-  taigi: { sizeMb: 108, label: "完整台語語音" },
+  taigi: { sizeMb: 186, label: "完整台語語音" },
   mandarin: { sizeMb: 39, label: "華語單字朗讀" },
 };
 
@@ -285,6 +285,7 @@ function renderComparison(
     attributes: { "aria-label": tagsLabel },
   });
   for (const tag of tags) {
+    if (!tag) continue;
     const item = makeElement("li", { className: "accent-tag", text: tag });
     accents.append(item);
   }
@@ -408,6 +409,9 @@ function renderTerm(
     comparisonList.append(
       renderComparison(term, comparison, {
         matched: matchedKeys.has(comparisonKey(comparison)) || (includesCommon && Boolean(match.common)),
+        ...(term.kind === "sense"
+          ? { tags: ["依教育部釋義對照"], tagsLabel: "資料來源" }
+          : {}),
         ...(includesCommon
           ? {
               tags: [...comparison.accents, "臺華共同詞", common.category].filter(Boolean),

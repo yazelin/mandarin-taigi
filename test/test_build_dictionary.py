@@ -98,6 +98,72 @@ def _comparison_sheets() -> list[str]:
                 _text_cell("4(1)"),
             ]
         ),
+        _row(
+            [
+                _number_cell("5"),
+                _text_cell("主詞目"),
+                _text_cell("麒麟鹿"),
+                _text_cell("kî-lîn-lo̍k"),
+                _text_cell("獸類"),
+                _text_cell("5(1)"),
+            ]
+        ),
+    ]
+    sense_rows = [
+        # 乾淨短釋義 → 推導出華語詞「長頸鹿」。
+        _row(
+            [
+                _number_cell("5"),
+                _number_cell("50"),
+                _text_cell("名詞"),
+                _text_cell("長頸鹿。哺乳動物。"),
+            ]
+        ),
+        # 同一主詞目的第二個義項不重複掛進同一個 gloss。
+        _row(
+            [
+                _number_cell("5"),
+                _number_cell("51"),
+                _text_cell("名詞"),
+                _text_cell("長頸鹿。另一個義項。"),
+            ]
+        ),
+        # 官方詞彙比較已有「醫院」，不因釋義再造一筆。
+        _row(
+            [
+                _number_cell("1"),
+                _number_cell("10"),
+                _text_cell("名詞"),
+                _text_cell("醫院。"),
+            ]
+        ),
+        # 臺華共同詞已收「想像」，跳過。
+        _row(
+            [
+                _number_cell("2"),
+                _number_cell("20"),
+                _text_cell("動詞"),
+                _text_cell("想像。"),
+            ]
+        ),
+        # 語法功能描述在黑名單。
+        _row(
+            [
+                _number_cell("5"),
+                _number_cell("52"),
+                _text_cell("接尾詞"),
+                _text_cell("動詞後綴。"),
+            ]
+        ),
+        # 整句釋義（非乾淨短詞）不收。
+        _row(
+            [
+                _number_cell("2"),
+                _number_cell("21"),
+                _text_cell("動詞"),
+                _text_cell("指人到醫療院所給醫生看病"),
+            ]
+        ),
     ]
     comparison_rows = [
         _row(
@@ -130,6 +196,7 @@ def _comparison_sheets() -> list[str]:
     ]
     return [
         _sheet("詞目", build_dictionary.TARGET_COLUMNS["詞目"], entry_rows),
+        _sheet("義項", build_dictionary.TARGET_COLUMNS["義項"], sense_rows),
         _sheet(
             "詞彙比較",
             build_dictionary.TARGET_COLUMNS["詞彙比較"],
@@ -150,6 +217,7 @@ class BuildDictionaryTests(unittest.TestCase):
             with zipfile.ZipFile(audio_zip, "w") as archive:
                 archive.writestr("0/1(1).mp3", b"ID3 exact source bytes")
                 archive.writestr("0/4(1).mp3", b"ID3 common source bytes")
+                archive.writestr("0/5(1).mp3", b"ID3 sense source bytes")
                 archive.writestr("0/2(1).mp3", b"ID3 ambiguous source bytes")
                 archive.writestr("0/unrelated.mp3", b"ID3 unrelated")
 
@@ -182,16 +250,18 @@ class BuildDictionaryTests(unittest.TestCase):
                 "source": build_dictionary.SOURCE_NAME,
                 "source_url": build_dictionary.SOURCE_URL,
                 "source_updated": "2026-07-14",
-                "term_count": 2,
+                "term_count": 3,
+                "sense_term_count": 1,
                 "common_entry_count": 1,
-                "searchable_headword_count": 3,
-                "comparison_count": 3,
+                "searchable_headword_count": 4,
+                "comparison_count": 4,
                 "exact_match_count": 1,
-                "audio_file_count": 2,
+                "audio_file_count": 3,
                 "audio_pack_bytes": len(b"ID3 exact source bytes")
-                + len(b"ID3 common source bytes"),
-                "audio_comparison_count": 1,
-                "comparison_audio_file_count": 1,
+                + len(b"ID3 common source bytes")
+                + len(b"ID3 sense source bytes"),
+                "audio_comparison_count": 2,
+                "comparison_audio_file_count": 2,
                 "common_audio_file_count": 1,
                 "common_audio_entry_count": 1,
             },
@@ -227,6 +297,20 @@ class BuildDictionaryTests(unittest.TestCase):
                             "accent": "臺南混合腔",
                             "hanji": "看醫生",
                             "romanization": "khuànn-i-sing",
+                        }
+                    ],
+                },
+                {
+                    "kind": "sense",
+                    "id": "sense:長頸鹿",
+                    "mandarin": "長頸鹿",
+                    "comparisons": [
+                        {
+                            "accent": "",
+                            "hanji": "麒麟鹿",
+                            "romanization": "kî-lîn-lo̍k",
+                            "term_id": "5",
+                            "audio": "../assets/audio/5(1).mp3",
                         }
                     ],
                 },

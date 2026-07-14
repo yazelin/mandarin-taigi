@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -70,8 +71,15 @@ TARGET_COLUMNS = {
 }
 
 FULL_DICTIONARY_SHEETS = ("詞目", "義項", "例句")
-COMPARISON_SHEETS = ("詞目", "詞彙比較")
+COMPARISON_SHEETS = ("詞目", "義項", "詞彙比較")
 COMMON_ENTRY_TYPE = "臺華共同詞"
+MAIN_ENTRY_TYPE = "主詞目"
+
+# 依官方釋義推導對照：義項「解說」的第一句必須是 1–6 個漢字的乾淨華語詞，
+# 才視為該主詞目的華語對應詞。句子、標點、非漢字一律不收，不做任何模糊猜測。
+SENSE_GLOSS_PATTERN = re.compile(r"^[一-鿿]{1,6}$")
+# ponytail: 純子字串黑名單擋語法功能描述；出現新的壞 gloss 再加詞即可
+SENSE_GLOSS_BLOCKLIST = ("後綴", "前綴", "詞綴", "助詞", "語氣詞")
 
 SOURCE_NAME = "教育部《臺灣台語常用詞辭典》"
 SOURCE_URL = "https://sutian.moe.edu.tw/zh-hant/siongkuantsuguan/"
@@ -403,10 +411,15 @@ def _build_comparison_data(
     common_ids: set[str] = set()
     common_hanji: set[str] = set()
     matched_audio: list[tuple[dict[str, Any], str, str]] = []
+    main_entries: dict[str, dict[str, str]] = {}
     for row in tables["詞目"]:
         exact_key = (row.get("漢字", ""), row.get("羅馬字", ""))
         if all(exact_key):
             entry_candidates.setdefault(exact_key, []).append(row)
+
+        if row.get("詞目類型") == MAIN_ENTRY_TYPE:
+            _, entry_key = _required_id(row, "詞目id", "詞目")
+            main_entries.setdefault(entry_key, row)
 
         if row.get("詞目類型") != COMMON_ENTRY_TYPE:
             continue
@@ -499,12 +512,60 @@ def _build_comparison_data(
 
         term["comparisons"].append(comparison)
 
+    # 依官方釋義推導的對照：釋義第一句是乾淨華語短詞的主詞目，補進官方
+    # 詞彙比較表沒收的華語詞（例：長頸鹿 → 長頷鹿、麒麟鹿）。腔口資訊
+    # 源頭沒有，一律留空；音檔直接用主詞目官方錄音。
+    comparison_mandarin = {term["mandarin"] for term in terms}
+    sense_terms_by_gloss: dict[str, dict[str, Any]] = {}
+    sense_entry_keys: dict[str, set[str]] = {}
+    for row in tables["義項"]:
+        _, entry_key = _required_id(row, "詞目id", "義項")
+        entry_row = main_entries.get(entry_key)
+        if entry_row is None:
+            continue
+        gloss = row.get("解說", "").split("。", 1)[0].strip()
+        if not SENSE_GLOSS_PATTERN.fullmatch(gloss):
+            continue
+        if any(blocked in gloss for blocked in SENSE_GLOSS_BLOCKLIST):
+            continue
+        if gloss in comparison_mandarin or gloss in common_hanji:
+            continue
+        hanji = entry_row.get("漢字", "")
+        romanization = entry_row.get("羅馬字", "")
+        if not hanji or not romanization or gloss == hanji:
+            continue
+        term = sense_terms_by_gloss.get(gloss)
+        if term is None:
+            term = {
+                "kind": "sense",
+                "id": f"sense:{gloss}",
+                "mandarin": gloss,
+                "comparisons": [],
+            }
+            sense_terms_by_gloss[gloss] = term
+            sense_entry_keys[gloss] = set()
+        if entry_key in sense_entry_keys[gloss]:
+            continue
+        sense_entry_keys[gloss].add(entry_key)
+        comparison = {
+            "accent": "",
+            "hanji": hanji,
+            "romanization": romanization,
+            "term_id": entry_row.get("詞目id", ""),
+        }
+        term["comparisons"].append(comparison)
+        audio_stem = entry_row.get("羅馬字音檔檔名", "")
+        if audio_stem:
+            matched_audio.append((comparison, audio_stem, "comparison"))
+    terms.extend(sense_terms_by_gloss.values())
+
     comparison_count = sum(len(term["comparisons"]) for term in terms)
     metadata = {
         "schema_version": 2,
         "source": SOURCE_NAME,
         "source_url": SOURCE_URL,
         "term_count": len(terms),
+        "sense_term_count": len(sense_terms_by_gloss),
         "common_entry_count": len(common_entries),
         "searchable_headword_count": len(
             {term["mandarin"] for term in terms}

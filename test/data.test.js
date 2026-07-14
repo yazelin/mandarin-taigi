@@ -21,7 +21,16 @@ test("generated dictionary metadata matches its rows", () => {
     dictionary.terms.reduce((total, term) => total + term.comparisons.length, 0),
   );
   assert.equal(new Set(dictionary.terms.map((term) => term.id)).size, dictionary.terms.length);
-  assert.ok(dictionary.terms.every((term) => term.kind === "comparison"));
+  assert.ok(dictionary.terms.every((term) => term.kind === "comparison" || term.kind === "sense"));
+  assert.equal(
+    dictionary.metadata.sense_term_count,
+    dictionary.terms.filter((term) => term.kind === "sense").length,
+  );
+  assert.ok(
+    dictionary.terms
+      .filter((term) => term.kind === "sense")
+      .every((term) => term.comparisons.every((comparison) => comparison.accent === "" && comparison.term_id)),
+  );
   assert.equal(
     new Set(dictionary.common_entries.map((entry) => entry.id)).size,
     dictionary.common_entries.length,
@@ -80,6 +89,15 @@ test("known official comparison is present without generated fallback text", () 
   assert.ok(hospital);
   assert.ok(hospital.comparisons.some((comparison) => comparison.hanji === "病院"));
   assert.ok(hospital.comparisons.some((comparison) => comparison.romanization === "i-sing-kuán"));
+});
+
+test("sense-derived headword maps to official main entries with audio", () => {
+  const giraffe = dictionary.terms.find((term) => term.mandarin === "長頸鹿");
+  assert.ok(giraffe);
+  assert.equal(giraffe.kind, "sense");
+  assert.ok(giraffe.comparisons.some((comparison) => comparison.hanji === "長頷鹿"));
+  assert.ok(giraffe.comparisons.some((comparison) => comparison.hanji === "麒麟鹿"));
+  assert.ok(giraffe.comparisons.every((comparison) => comparison.audio));
 });
 
 test("known official common headword is searchable data with unchanged audio", () => {
