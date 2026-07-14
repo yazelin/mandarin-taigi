@@ -89,3 +89,9 @@ python3 scripts/build_mandarin_audio.py \
 ## 與 wish-pool #26 的關係
 
 這個 repo 是「正宗台灣國語與台語語音系統（網頁版）」的第一個正確里程碑：先交付基本、可離線、無金鑰的詞語與唸法對照。原願望中的任意文字／文件輸入與完整雙語 TTS 尚未完成，因此不能把這個版本當作整個願望結案。
+
+## 追蹤與支持
+
+- GitHub：<https://github.com/yazelin/mandarin-taigi>
+- Facebook：<https://www.facebook.com/yaze.lin.gm>
+- Buy Me a Coffee：<https://buymeacoffee.com/yazelin>

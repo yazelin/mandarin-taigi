@@ -4,15 +4,15 @@ import {
   groupComparisons,
   pickSuggestionTerms,
   searchTermsDetailed,
-} from "./search.js?v=8";
-import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=8";
-import { initializeLearning } from "./learning.js?v=8";
-import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=8";
+} from "./search.js?v=9";
+import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=9";
+import { initializeLearning } from "./learning.js?v=9";
+import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=9";
 
-const RELEASE_REVISION = "8";
-const DATA_URL = "./data/dictionary.json?v=8";
+const RELEASE_REVISION = "9";
+const DATA_URL = "./data/dictionary.json?v=9";
 const DATA_BASE_URL = new URL(DATA_URL, window.location.href);
-const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=8";
+const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=9";
 const MANDARIN_AUDIO_BASE_URL = new URL(MANDARIN_AUDIO_URL, window.location.href);
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";

@@ -1,28 +1,28 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "8";
+const RELEASE_REVISION = "9";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v8";
+const SHELL_CACHE = "mandarin-taigi-shell-v9";
 // Keep this in sync with app.js and include both official audio source versions.
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=8",
-  "./app.js?v=8",
-  "./search.js?v=8",
-  "./speech.js?v=8",
-  "./quiz.js?v=8",
-  "./learning.js?v=8",
-  "./offline.js?v=8",
-  "./manifest.webmanifest?v=8",
+  "./styles.css?v=9",
+  "./app.js?v=9",
+  "./search.js?v=9",
+  "./speech.js?v=9",
+  "./quiz.js?v=9",
+  "./learning.js?v=9",
+  "./offline.js?v=9",
+  "./manifest.webmanifest?v=9",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
   "./assets/icon-maskable-512.png",
   "./assets/apple-touch-icon.png",
-  "./data/dictionary.json?v=8",
-  "./data/mandarin-audio.json?v=8",
+  "./data/dictionary.json?v=9",
+  "./data/mandarin-audio.json?v=9",
 ];
 
 const SCOPE_URL = new URL(self.registration.scope);
