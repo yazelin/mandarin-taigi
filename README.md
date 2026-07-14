@@ -16,7 +16,8 @@
 - 每局從完整詞庫中可唯一判定的候選完全隨機抽 10 題「聽台語猜華語」四選一；題目與正確答案不重複，歧義詞不會拿來硬判單一答案。
 - 答錯詞語會存在本機錯題本，並可用學習卡複習；同一詞連續答對兩次視為掌握。
 - 完成挑戰可產生不洩題的 PNG 成績圖卡；支援系統分享時直接分享，不支援時下載圖卡並嘗試複製文字連結。
-- 網站與詞庫首次載入後可離線查詢；13,161 個台語 MP3（約 186 MB）與 274 個華語 WAV（約 108 MB）會嘗試在播放後快取，也可各自一次下載以確保完整離線播放。
+- 首次開啟先下載約 1.02 MB 的核心詞庫，華語、台語漢字、臺羅與腔口搜尋會立即可用；約 0.74 MB 的發音／來源／分類資料在背景補齊，介面會顯示真實進度、完成、失敗與重試狀態。完整文字與離線服務都確認後才會標示可離線查詢。
+- 13,161 個台語 MP3（約 186 MB）與 274 個華語 WAV（約 108 MB）不算在文字詞庫進度內；它們會嘗試在播放後快取，也可各自一次下載以確保完整離線播放。
 - 裝置找不到可用華語 voice，或播放未真正開始時，會停用或明確報錯，不再假裝已播放。
 - 純靜態網站，沒有後端、帳號、追蹤碼或第三方 AI 呼叫；成績、錯題與學習卡只存在這台裝置。
 - 大按鈕、鍵盤焦點與清楚的播放狀態，方便長輩與觸控操作。
@@ -60,14 +61,19 @@ curl -L -o /tmp/kautian.ods https://sutian.moe.edu.tw/media/senn/ods/kautian.ods
 curl -L -o /tmp/sutiau-mp3.zip https://sutian.moe.edu.tw/media/senn/sutiau-mp3.zip
 python3 scripts/build_dictionary.py \
   /tmp/kautian.ods \
-  data/dictionary.json \
+  data/.dictionary-canonical.tmp.json \
   --audio-zip /tmp/sutiau-mp3.zip \
   --audio-output assets/audio \
   --source-updated 2026-07-13
+python3 scripts/build_runtime_data.py \
+  data/.dictionary-canonical.tmp.json \
+  data/dictionary-core.json \
+  data/dictionary-details.json
+rm data/.dictionary-canonical.tmp.json
 python3 -m unittest discover -s test -p 'test_*.py'
 ```
 
-轉換只保留官方原文、建立表格間關聯，將「詞彙比較」與「臺華共同詞」完整整合進同一份 schema，並保留每筆來源類型；再以漢字＋臺羅完全相等做音檔配對，不做模糊比對或內容改寫。
+第一支腳本在 `data/` 產生被 Git 忽略的完整中間檔（放在同一目錄才能保持音檔相對路徑）；第二支會先做逐欄無損還原檢查，再寫出實際部署的核心與詳細資料，最後刪除中間檔，因此 repo 不會多部署一份重複的完整 JSON。轉換只保留官方原文、建立表格間關聯，將「詞彙比較」與「臺華共同詞」完整整合進同一份 schema，並保留每筆來源類型；再以漢字＋臺羅完全相等做音檔配對，不做模糊比對或內容改寫。
 
 華語官方音檔需另下載《國語辭典簡編本》文字 ZIP（約 7 MB）與單字音 WAV ZIP（約 1.5 GB）。解壓文字 XLSX 後，腳本只抽出本站 274 個精確單字詞的官方首要讀音，約 108 MB；多字詞的「釋義朗讀」不會冒充詞目發音：
 
@@ -78,7 +84,7 @@ curl -L -o /tmp/dict-concised-word-audio.zip \
   https://language.moe.gov.tw/001/Upload/Files/site_content/M0001/respub/download/dict_concised_music_word_2014_20260626.zip
 unzip /tmp/dict-concised.zip -d /tmp/dict-concised
 python3 scripts/build_mandarin_audio.py \
-  data/dictionary.json \
+  data/dictionary-core.json \
   /tmp/dict-concised/dict_concised_2014_20260626.xlsx \
   /tmp/dict-concised-word-audio.zip \
   data/mandarin-audio.json \

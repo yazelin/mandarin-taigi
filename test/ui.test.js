@@ -25,6 +25,9 @@ test("homepage exposes all learning routes and split offline audio controls", ()
     "download-mandarin-audio",
     "cancel-audio-download",
     "clear-offline-audio",
+    "dictionary-load-status",
+    "dictionary-load-progress",
+    "retry-dictionary-load",
   ]) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
@@ -36,7 +39,7 @@ test("homepage exposes all learning routes and split offline audio controls", ()
 test("app and worker agree on the persistent audio cache name", () => {
   const appCache = read("app.js").match(/const AUDIO_CACHE = "([^"]+)"/)?.[1];
   const workerCache = read("sw.js").match(/const AUDIO_CACHE = "([^"]+)"/)?.[1];
-  const sourceDate = JSON.parse(read("data/dictionary.json")).metadata.source_updated.replaceAll("-", "");
+  const sourceDate = JSON.parse(read("data/dictionary-core.json")).m.source_updated.replaceAll("-", "");
   const mandarinSource = JSON.parse(read("data/mandarin-audio.json")).metadata.source_version;
   assert.ok(appCache);
   assert.equal(workerCache, appCache);
@@ -71,17 +74,35 @@ test("HTML and every module edge use one versioned release URL", () => {
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "11");
+  assert.equal(appRelease, "12");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /styles\.css\?v=11/);
-  assert.match(html, /app\.js\?v=11/);
-  for (const module of ["search", "speech", "learning", "offline"]) {
-    assert.ok(app.includes(`./${module}.js?v=11`), module);
+  assert.match(html, /styles\.css\?v=12/);
+  assert.match(html, /app\.js\?v=12/);
+  for (const module of ["search", "speech", "learning", "offline", "dictionary-data"]) {
+    assert.ok(app.includes(`./${module}.js?v=12`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=11"));
-  assert.ok(app.includes("./data/dictionary.json?v=11"));
-  assert.ok(app.includes("./data/mandarin-audio.json?v=11"));
+  assert.ok(learning.includes("./quiz.js?v=12"));
+  assert.ok(app.includes("./data/dictionary-core.json?v=12"));
+  assert.ok(app.includes("./data/dictionary-details.json?v=12"));
+  assert.ok(app.includes("./data/mandarin-audio.json?v=12"));
+  assert.equal(app.includes("./data/dictionary.json"), false);
   assert.ok(app.includes('register("./sw.js")'));
   assert.ok(app.includes('type: "GET_RELEASE"'));
   assert.ok(worker.includes('type !== "GET_RELEASE"'));
+});
+
+test("text progress stays separate from optional audio status and has honest states", () => {
+  const html = read("index.html");
+  const app = read("app.js");
+  assert.ok(html.includes('id="dictionary-load"'));
+  assert.ok(html.includes('id="offline-status"'));
+  assert.ok(app.includes("核心詞庫已可查"));
+  assert.ok(app.includes("完整文字詞庫與離線服務已準備完成"));
+  assert.ok(app.includes("選用的語音包不在這個進度內"));
+  assert.ok(app.includes("state.detailsCached"));
+  assert.ok(app.includes('compatibility === "current" || compatibility === "installed"'));
+  assert.ok(app.includes("lastAnnouncedProgress"));
+  assert.match(app, /state\.coreCachePromise = cacheValidatedResponse[\s\S]{0,200}registerServiceWorker\(\)/);
+  assert.ok(html.includes('id="dictionary-load-live"'));
+  assert.ok(html.indexOf('id="dictionary-load-progress"') < html.indexOf('id="dictionary-load-live"'));
 });

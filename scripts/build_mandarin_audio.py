@@ -3,7 +3,7 @@
 
 The official Concised Mandarin Dictionary distributes the recordings as WAV in
 one large ZIP.  This builder copies only the primary pronunciation for exact
-single-character headwords already present in ``data/dictionary.json``.  Audio
+single-character headwords already present in ``data/dictionary-core.json``. Audio
 bytes are never transcoded or edited.
 """
 
@@ -196,6 +196,19 @@ def _write_json(document: dict[str, Any], destination: Path) -> None:
     os.replace(temporary_name, destination)
 
 
+def dictionary_headwords(dictionary: dict[str, Any]) -> set[str]:
+    """Read Mandarin headwords from canonical or compact runtime data."""
+    if isinstance(dictionary.get("terms"), list):
+        return {term.get("mandarin", "") for term in dictionary["terms"]}
+    if dictionary.get("v") == 1 and isinstance(dictionary.get("t"), list):
+        return {
+            str(term_row[1])
+            for term_row in dictionary["t"]
+            if isinstance(term_row, list) and len(term_row) == 4
+        }
+    raise MandarinAudioBuildError("Dictionary must be canonical JSON or runtime core JSON")
+
+
 def build_mandarin_audio(
     dictionary_path: Path,
     concise_xlsx: Path,
@@ -206,7 +219,7 @@ def build_mandarin_audio(
     source_version: str,
 ) -> dict[str, Any]:
     dictionary = json.loads(dictionary_path.read_text(encoding="utf-8"))
-    terms = {term.get("mandarin", "") for term in dictionary.get("terms", [])}
+    terms = dictionary_headwords(dictionary)
     dictionary_rows = read_xlsx_rows(concise_xlsx)
 
     try:

@@ -13,10 +13,16 @@ import {
   isMastered,
   nextLearningProgress,
 } from "../quiz.js";
+import { applyDictionaryDetails, decodeDictionaryCore } from "../dictionary-data.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dictionary = JSON.parse(
-  readFileSync(resolve(repositoryRoot, "data/dictionary.json"), "utf8"),
+const decoded = decodeDictionaryCore(
+  JSON.parse(readFileSync(resolve(repositoryRoot, "data/dictionary-core.json"), "utf8")),
+);
+const dictionary = applyDictionaryDetails(
+  decoded.dictionary,
+  JSON.parse(readFileSync(resolve(repositoryRoot, "data/dictionary-details.json"), "utf8")),
+  decoded.runtime,
 );
 
 function seededRandom(seed) {

@@ -8,7 +8,7 @@ import vm from "node:vm";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerSource = readFileSync(resolve(repositoryRoot, "sw.js"), "utf8");
 const scope = "https://example.test/mandarin-taigi/";
-const shellCache = "mandarin-taigi-shell-v11";
+const shellCache = "mandarin-taigi-shell-v12";
 const audioCache = "mandarin-taigi-audio-20260713-2014_20260626";
 
 function cacheKey(input) {
@@ -192,7 +192,7 @@ test("an offline hash view falls back to the cached single-page app", async () =
 });
 
 test("versioned dictionary data stays immutable with its app shell", async () => {
-  const dataUrl = `${scope}data/dictionary.json?v=11`;
+  const dataUrl = `${scope}data/dictionary-core.json?v=12`;
   const worker = createWorker(async () => new Response('{"version":2}'));
   worker.seed(shellCache, dataUrl, '{"version":1}', {
     headers: { "content-type": "application/json" },
@@ -251,7 +251,7 @@ test("a cached full audio file satisfies byte-range playback offline", async () 
 });
 
 test("cached versioned shell assets are immutable for the worker lifetime", async () => {
-  const appUrl = `${scope}app.js?v=11`;
+  const appUrl = `${scope}app.js?v=12`;
   const worker = createWorker(async () => new Response("new app", { status: 200 }));
   worker.seed(shellCache, appUrl, "old app", { status: 200 });
 
@@ -295,13 +295,24 @@ test("activation removes obsolete managed caches but preserves current audio and
 test("worker reports its actual release and audio cache through the update handshake", () => {
   const worker = createWorker(async () => new Response("unused"));
   const reply = worker.dispatchMessage({ type: "GET_RELEASE" });
-  assert.equal(reply.release, "11");
+  assert.equal(reply.release, "12");
   assert.equal(reply.audioCache, audioCache);
   assert.equal(worker.dispatchMessage({ type: "UNKNOWN" }), undefined);
 });
 
 test("quiz and learning modules are part of the install shell", () => {
-  assert.match(workerSource, /"\.\/quiz\.js\?v=11"/);
-  assert.match(workerSource, /"\.\/learning\.js\?v=11"/);
-  assert.match(workerSource, /"\.\/offline\.js\?v=11"/);
+  assert.match(workerSource, /"\.\/quiz\.js\?v=12"/);
+  assert.match(workerSource, /"\.\/learning\.js\?v=12"/);
+  assert.match(workerSource, /"\.\/offline\.js\?v=12"/);
+  assert.match(workerSource, /"\.\/dictionary-data\.js\?v=12"/);
+});
+
+test("worker serves validated runtime data but never precaches it itself", () => {
+  const shellList = workerSource.match(/const SHELL_FILES = \[([\s\S]*?)\];/)?.[1] || "";
+  const runtimeList = workerSource.match(/const RUNTIME_DATA_FILES = \[([\s\S]*?)\];/)?.[1] || "";
+  assert.equal(shellList.includes("dictionary-core.json"), false);
+  assert.equal(shellList.includes("dictionary-details.json"), false);
+  assert.equal(shellList.includes("mandarin-audio.json"), false);
+  assert.ok(runtimeList.includes("dictionary-core.json?v=12"));
+  assert.ok(runtimeList.includes("dictionary-details.json?v=12"));
 });

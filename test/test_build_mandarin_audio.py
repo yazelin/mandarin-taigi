@@ -6,6 +6,19 @@ from scripts import build_mandarin_audio
 
 
 class BuildMandarinAudioTests(unittest.TestCase):
+    def test_reads_headwords_from_runtime_core(self) -> None:
+        runtime_core = {
+            "v": 1,
+            "t": [
+                ["1", "家", 0, []],
+                ["2", "醫院", 0, []],
+            ],
+        }
+        self.assertEqual(
+            build_mandarin_audio.dictionary_headwords(runtime_core),
+            {"家", "醫院"},
+        )
+
     def test_selects_primary_exact_audio_without_guessing_missing_words(self) -> None:
         dictionary_rows = [
             {

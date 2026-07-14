@@ -1,35 +1,42 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "11";
+const RELEASE_REVISION = "12";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v11";
+const SHELL_CACHE = "mandarin-taigi-shell-v12";
 // Keep this in sync with app.js and include both official audio source versions.
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=11",
-  "./app.js?v=11",
-  "./search.js?v=11",
-  "./speech.js?v=11",
-  "./quiz.js?v=11",
-  "./learning.js?v=11",
-  "./offline.js?v=11",
-  "./manifest.webmanifest?v=11",
+  "./styles.css?v=12",
+  "./app.js?v=12",
+  "./search.js?v=12",
+  "./speech.js?v=12",
+  "./quiz.js?v=12",
+  "./learning.js?v=12",
+  "./offline.js?v=12",
+  "./dictionary-data.js?v=12",
+  "./manifest.webmanifest?v=12",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
   "./assets/icon-maskable-512.png",
   "./assets/apple-touch-icon.png",
-  "./data/dictionary.json?v=11",
-  "./data/mandarin-audio.json?v=11",
+];
+// The app owns these downloads so it can validate matching revisions, report
+// progress, and cache only complete JSON. The worker serves the validated,
+// versioned responses cache-first but never races the app to precache them.
+const RUNTIME_DATA_FILES = [
+  "./data/dictionary-core.json?v=12",
+  "./data/dictionary-details.json?v=12",
+  "./data/mandarin-audio.json?v=12",
 ];
 
 const SCOPE_URL = new URL(self.registration.scope);
 const ROOT_URL = SCOPE_URL.href;
 const INDEX_URL = new URL("index.html", SCOPE_URL).href;
 const SHELL_URLS = new Set(
-  SHELL_FILES.map((path) => urlWithoutSearchOrHash(new URL(path, SCOPE_URL))),
+  [...SHELL_FILES, ...RUNTIME_DATA_FILES].map((path) => urlWithoutSearchOrHash(new URL(path, SCOPE_URL))),
 );
 
 function urlWithoutSearchOrHash(value) {
@@ -79,7 +86,7 @@ async function precacheShell() {
   await Promise.all(
     SHELL_FILES.map(async (path) => {
       const url = new URL(path, SCOPE_URL);
-      const request = new Request(url, { cache: "reload" });
+      const request = new Request(url, { cache: url.searchParams.has("v") ? "force-cache" : "reload" });
       const response = await fetch(request);
 
       if (!isCacheableShellResponse(url, response)) {

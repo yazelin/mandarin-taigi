@@ -5,12 +5,24 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { pickSuggestionTerms } from "../search.js";
+import { applyDictionaryDetails, decodeDictionaryCore } from "../dictionary-data.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dataPath = resolve(repositoryRoot, "data/dictionary.json");
-const dictionary = JSON.parse(readFileSync(dataPath, "utf8"));
+const dataPath = resolve(repositoryRoot, "data/dictionary-core.json");
+const decoded = decodeDictionaryCore(JSON.parse(readFileSync(dataPath, "utf8")));
+const dictionary = applyDictionaryDetails(
+  decoded.dictionary,
+  JSON.parse(readFileSync(resolve(repositoryRoot, "data/dictionary-details.json"), "utf8")),
+  decoded.runtime,
+);
 const mandarinAudioPath = resolve(repositoryRoot, "data/mandarin-audio.json");
 const mandarinAudio = JSON.parse(readFileSync(mandarinAudioPath, "utf8"));
+
+test("only split runtime dictionaries are deployed", () => {
+  assert.equal(existsSync(resolve(repositoryRoot, "data/dictionary.json")), false);
+  assert.equal(existsSync(resolve(repositoryRoot, "data/dictionary-core.json")), true);
+  assert.equal(existsSync(resolve(repositoryRoot, "data/dictionary-details.json")), true);
+});
 
 test("generated dictionary metadata matches its rows", () => {
   assert.equal(dictionary.metadata.schema_version, 2);

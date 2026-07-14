@@ -45,10 +45,10 @@
       content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=3"
     />
     <meta name="twitter:image:alt" content="國台語詞語對照：這個詞，台語按怎講？" />
-    <link rel="manifest" href="./manifest.webmanifest?v=11" />
+    <link rel="manifest" href="./manifest.webmanifest?v=12" />
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles.css?v=11" />
+    <link rel="stylesheet" href="./styles.css?v=12" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -79,9 +79,9 @@
       </a>
       <nav class="site-nav" aria-label="主要功能">
         <a class="site-nav__link" href="#dictionary" data-app-view="dictionary">查詞</a>
-        <a class="site-nav__link" href="#challenge" data-app-view="challenge">隨機挑戰</a>
-        <a class="site-nav__link" href="#wrongbook" data-app-view="wrongbook">錯題本</a>
-        <a class="site-nav__link" href="#flashcards" data-app-view="flashcards">學習卡</a>
+        <a class="site-nav__link" href="#challenge" data-app-view="challenge" data-requires-complete-data aria-disabled="true">隨機挑戰</a>
+        <a class="site-nav__link" href="#wrongbook" data-app-view="wrongbook" data-requires-complete-data aria-disabled="true">錯題本</a>
+        <a class="site-nav__link" href="#flashcards" data-app-view="flashcards" data-requires-complete-data aria-disabled="true">學習卡</a>
       </nav>
       <div class="header-actions">
         <button id="install-app" class="header-install" type="button" hidden>安裝 App</button>
@@ -90,6 +90,22 @@
     </header>
 
     <main id="main">
+      <div id="dictionary-load" class="dictionary-load" data-kind="loading">
+        <div class="dictionary-load__row">
+          <span id="dictionary-load-status">正在下載核心詞庫；完成後會先開放查詞。</span>
+          <button id="retry-dictionary-load" class="text-button" type="button" hidden>重試下載</button>
+        </div>
+        <progress
+          id="dictionary-load-progress"
+          class="dictionary-load__progress"
+          max="100"
+          aria-label="完整文字詞庫下載進度"
+        ></progress>
+        <span id="dictionary-load-live" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+          正在下載核心詞庫。
+        </span>
+      </div>
+
       <section id="dictionary" class="hero dictionary-view" aria-labelledby="page-title">
         <div class="hero__copy">
           <p class="kicker">免登入・免 API key・離線優先</p>
@@ -224,6 +240,6 @@
     </aside>
 
     <noscript><p class="noscript">這個查詢工具需要啟用 JavaScript。</p></noscript>
-    <script type="module" src="./app.js?v=11"></script>
+    <script type="module" src="./app.js?v=12"></script>
   </body>
 </html>
