@@ -4,18 +4,18 @@ import {
   groupComparisons,
   pickSuggestionTerms,
   searchTermsDetailed,
-} from "./search.js?v=14";
-import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=14";
-import { initializeLearning } from "./learning.js?v=14";
-import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=14";
-import { applyDictionaryDetails, decodeDictionaryCore } from "./dictionary-data.js?v=14";
+} from "./search.js?v=15";
+import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=15";
+import { initializeLearning } from "./learning.js?v=15";
+import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=15";
+import { applyDictionaryDetails, decodeDictionaryCore } from "./dictionary-data.js?v=15";
 import {
   loadValidatedJson,
   requestPersistentStorage,
   storeDataBytes,
-} from "./data-loader.js?v=14";
+} from "./data-loader.js?v=15";
 
-const RELEASE_REVISION = "14";
+const RELEASE_REVISION = "15";
 // Text data has its own immutable identity. UI-only releases keep these v13
 // canonical keys so an already-downloaded dictionary opens from this device.
 const CORE_DATA_URL = "./data/dictionary-core.json?v=13";

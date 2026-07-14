@@ -7,7 +7,11 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
 const canonicalUrl = "https://yazelin.github.io/mandarin-taigi/";
-const ogImageUrl = `${canonicalUrl}assets/og-image.png?v=3`;
+const ogImageUrl = `${canonicalUrl}assets/og-image.png?v=4`;
+const dictionaryMetadata = JSON.parse(
+  readFileSync(resolve(repositoryRoot, "data/dictionary-core.json"), "utf8"),
+).m;
+const formatCount = (value) => new Intl.NumberFormat("en-US").format(value);
 
 test("homepage exposes complete canonical and social sharing metadata", () => {
   assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl}"`));
@@ -27,9 +31,10 @@ test("Open Graph PNG has the declared 1200 by 630 dimensions", () => {
 
 test("Open Graph source advertises the complete searchable corpus", () => {
   const svg = readFileSync(resolve(repositoryRoot, "assets/og-image.svg"), "utf8");
-  assert.match(svg, /6,505 可搜尋詞目/);
-  assert.match(svg, /6,607 台語音/);
-  assert.doesNotMatch(svg, /1,093 台語音/);
+  assert.ok(svg.includes(`${formatCount(dictionaryMetadata.searchable_headword_count)} 可搜尋詞目`));
+  assert.ok(svg.includes(`${formatCount(dictionaryMetadata.comparison_count)} 腔口對照`));
+  assert.ok(svg.includes(`${formatCount(dictionaryMetadata.audio_file_count)} 台語音`));
+  assert.doesNotMatch(svg, /6,505 可搜尋詞目|6,607 台語音/);
 });
 
 test("structured data and sitemap use the public Pages URL", () => {

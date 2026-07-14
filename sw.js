@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "14";
+const RELEASE_REVISION = "15";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v14";
+const SHELL_CACHE = "mandarin-taigi-shell-v15";
 // Dictionary bytes change independently from the app shell. Keeping this cache
 // on v13 means a UI-only release never forces the same validated JSON to reload.
 const DATA_CACHE = "mandarin-taigi-data-v13";
@@ -12,16 +12,16 @@ const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=14",
-  "./app.js?v=14",
-  "./search.js?v=14",
-  "./speech.js?v=14",
-  "./quiz.js?v=14",
-  "./learning.js?v=14",
-  "./offline.js?v=14",
-  "./dictionary-data.js?v=14",
-  "./data-loader.js?v=14",
-  "./manifest.webmanifest?v=14",
+  "./styles.css?v=15",
+  "./app.js?v=15",
+  "./search.js?v=15",
+  "./speech.js?v=15",
+  "./quiz.js?v=15",
+  "./learning.js?v=15",
+  "./offline.js?v=15",
+  "./dictionary-data.js?v=15",
+  "./data-loader.js?v=15",
+  "./manifest.webmanifest?v=15",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
@@ -153,7 +153,7 @@ self.addEventListener("activate", (event) => {
     (async () => {
       const keys = await caches.keys();
       // v13 mixed shell and validated data in one cache. Copy all three data
-      // payloads first; if any copy fails, retain the legacy cache so the v14
+      // payloads first; if any copy fails, retain the legacy cache so the current
       // page can still validate and use it without a network request.
       const legacyMigrated = await migrateLegacyData(keys);
       await Promise.all(

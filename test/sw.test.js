@@ -8,7 +8,7 @@ import vm from "node:vm";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerSource = readFileSync(resolve(repositoryRoot, "sw.js"), "utf8");
 const scope = "https://example.test/mandarin-taigi/";
-const shellCache = "mandarin-taigi-shell-v14";
+const shellCache = "mandarin-taigi-shell-v15";
 const dataCache = "mandarin-taigi-data-v13";
 const legacyShellCache = "mandarin-taigi-shell-v13";
 const audioCache = "mandarin-taigi-audio-20260713-2014_20260626";
@@ -156,7 +156,7 @@ function createWorker(fetchImplementation, { openFails = false, putFails = false
   };
 }
 
-test("the v14 document and shell assets stay on one immutable release", async (t) => {
+test("the v15 document and shell assets stay on one immutable release", async (t) => {
   const indexUrl = `${scope}index.html`;
 
   await t.test("app navigation uses its installed document without mixing in a deployment", async () => {
@@ -236,7 +236,7 @@ test("uncached v13 dictionary data is not persisted before app validation", asyn
   assert.equal(worker.fetchCalls.length, 1);
 });
 
-test("install caches only the v14 app shell and never downloads dictionary payloads", async () => {
+test("install caches only the v15 app shell and never downloads dictionary payloads", async () => {
   const worker = createWorker(async (request) => {
     const url = new URL(request.url);
     if (url.pathname.endsWith("/") || url.pathname.endsWith("index.html")) {
@@ -253,8 +253,8 @@ test("install caches only the v14 app shell and never downloads dictionary paylo
     worker.fetchCalls.some(([request]) => /\/data\/(?:dictionary-(?:core|details)|mandarin-audio)\.json/.test(request.url)),
     false,
   );
-  assert.ok(worker.cached(shellCache, `${scope}app.js?v=14`));
-  assert.ok(worker.cached(shellCache, `${scope}data-loader.js?v=14`));
+  assert.ok(worker.cached(shellCache, `${scope}app.js?v=15`));
+  assert.ok(worker.cached(shellCache, `${scope}data-loader.js?v=15`));
 });
 
 test("audio is cached on demand and served cache-first", async () => {
@@ -304,7 +304,7 @@ test("a cached full audio file satisfies byte-range playback offline", async () 
 });
 
 test("cached versioned shell assets are immutable for the worker lifetime", async () => {
-  const appUrl = `${scope}app.js?v=14`;
+  const appUrl = `${scope}app.js?v=15`;
   const worker = createWorker(async () => new Response("new app", { status: 200 }));
   worker.seed(shellCache, appUrl, "old app", { status: 200 });
 
@@ -344,7 +344,7 @@ test("activation migrates all three legacy v13 payloads before deleting the old 
     });
   }
   worker.seed("mandarin-taigi-shell-v4", `${scope}old.js`, "old");
-  worker.seed(shellCache, `${scope}app.js?v=14`, "current");
+  worker.seed(shellCache, `${scope}app.js?v=15`, "current");
   worker.seed("mandarin-taigi-audio-v0", `${scope}assets/audio/old.mp3`, "old audio");
   worker.seed(audioCache, `${scope}assets/audio/current.mp3`, "current audio");
   worker.seed("another-app-cache", `${scope}other`, "other");
@@ -379,18 +379,18 @@ test("activation preserves the legacy shell if even one v13 payload cannot migra
   assert.equal(worker.clientsClaimed, true);
 });
 
-test("worker reports its v14 shell and stable v13 data cache through the update handshake", () => {
+test("worker reports its v15 shell and stable v13 data cache through the update handshake", () => {
   const worker = createWorker(async () => new Response("unused"));
   const reply = worker.dispatchMessage({ type: "GET_RELEASE" });
-  assert.equal(reply.release, "14");
+  assert.equal(reply.release, "15");
   assert.equal(reply.audioCache, audioCache);
   assert.equal(reply.dataCache, dataCache);
   assert.equal(worker.dispatchMessage({ type: "UNKNOWN" }), undefined);
 });
 
-test("all v14 modules, including the local-first loader, are part of the install shell", () => {
+test("all v15 modules, including the local-first loader, are part of the install shell", () => {
   for (const module of ["app", "search", "speech", "quiz", "learning", "offline", "dictionary-data", "data-loader"]) {
-    assert.match(workerSource, new RegExp(`"\\.\\/${module}\\.js\\?v=14"`), module);
+    assert.match(workerSource, new RegExp(`"\\.\\/${module}\\.js\\?v=15"`), module);
   }
 });
 

@@ -78,22 +78,24 @@ test("install manifest provides direct challenge and wrongbook shortcuts", () =>
   assert.ok(manifest.shortcuts.some((shortcut) => shortcut.url === "./#wrongbook"));
 });
 
-test("the v14 app shell keeps the unchanged v13 dictionary identity", () => {
+test("the v15 app shell keeps the unchanged v13 dictionary identity", () => {
   const html = read("index.html");
   const app = read("app.js");
   const learning = read("learning.js");
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "14");
+  assert.equal(appRelease, "15");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /manifest\.webmanifest\?v=14/);
-  assert.match(html, /styles\.css\?v=14/);
-  assert.match(html, /app\.js\?v=14/);
+  assert.match(html, /manifest\.webmanifest\?v=15/);
+  assert.match(html, /styles\.css\?v=15/);
+  assert.match(html, /app\.js\?v=15/);
   for (const module of ["search", "speech", "learning", "offline", "dictionary-data", "data-loader"]) {
-    assert.ok(app.includes(`./${module}.js?v=14`), module);
+    assert.ok(app.includes(`./${module}.js?v=15`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=14"));
+  assert.ok(learning.includes("./quiz.js?v=15"));
+  assert.ok(learning.includes("下載約 186 MB 完整台語語音"));
+  assert.equal(learning.includes("下載約 108 MB 完整台語語音"), false);
   assert.ok(app.includes("./data/dictionary-core.json?v=13"));
   assert.ok(app.includes("./data/dictionary-details.json?v=13"));
   assert.ok(app.includes("./data/mandarin-audio.json?v=13"));
