@@ -35,14 +35,18 @@ function comparison(termId, audio, hanji, romanization, accent = "臺南混合�
 }
 
 test("builds a large safe pool from the generated dictionary", () => {
-  const pool = buildQuizPool(dictionary.terms);
+  const pool = buildQuizPool(dictionary);
   const answers = new Set(pool.map((candidate) => candidate.answer));
 
-  assert.ok(pool.length >= 500, `expected hundreds of candidates, received ${pool.length}`);
-  assert.ok(answers.size >= 500, `expected hundreds of answers, received ${answers.size}`);
+  assert.ok(pool.length >= 1000, `expected a full-dictionary pool, received ${pool.length}`);
+  assert.ok(answers.size >= 1000, `expected a full-dictionary answer set, received ${answers.size}`);
   assert.equal(new Set(pool.map((candidate) => candidate.id)).size, pool.length);
+  assert.equal(answers.has("想像"), true, "official common headwords must enter the full quiz pool");
   assert.equal(answers.has("老師"), false, "an answer involved in ambiguous audio must be excluded");
   assert.equal(answers.has("妓院"), false, "explicit-content denylist must be applied");
+  for (const answer of ["性愛", "色情", "強姦", "精子", "肛門", "胸罩", "一堆屎"]) {
+    assert.equal(answers.has(answer), false, `${answer} must stay out of the public quiz`);
+  }
 
   for (const candidate of pool) {
     assert.match(candidate.answer, /^[\p{Script=Han}]{1,5}$/u);
@@ -59,6 +63,40 @@ test("builds a large safe pool from the generated dictionary", () => {
     );
     assert.deepEqual(candidate.accents, [...new Set(candidate.accents)].sort());
   }
+});
+
+test("adds common headwords deliberately and excludes cross-source ambiguity", () => {
+  const dictionaryFixture = {
+    terms: [
+      {
+        kind: "comparison",
+        id: "1",
+        mandarin: "公共汽車",
+        comparisons: [comparison("bus", "bus.mp3", "公車", "kong-tshia")],
+      },
+    ],
+    common_entries: [
+      {
+        kind: "common",
+        id: "2",
+        hanji: "想像",
+        romanization: "sióng-siōng",
+        audio: "imagination.mp3",
+      },
+      {
+        kind: "common",
+        id: "3",
+        hanji: "公車",
+        romanization: "kong-tshia",
+        audio: "bus.mp3",
+      },
+    ],
+  };
+
+  const pool = buildQuizPool(dictionaryFixture);
+  assert.deepEqual(pool.map((candidate) => candidate.answer), ["想像"]);
+  assert.equal(pool.some((candidate) => candidate.answer === "公共汽車"), false);
+  assert.equal(pool.some((candidate) => candidate.answer === "公車"), false);
 });
 
 test("detects ambiguity before validation, excludes every affected answer, and deduplicates accents", () => {

@@ -1,26 +1,27 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "6";
+const RELEASE_REVISION = "7";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v6";
+const SHELL_CACHE = "mandarin-taigi-shell-v7";
 // Keep this in sync with app.js and include both official audio source versions.
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
+const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=6",
-  "./app.js?v=6",
-  "./search.js?v=6",
-  "./speech.js?v=6",
-  "./quiz.js?v=6",
-  "./learning.js?v=6",
-  "./manifest.webmanifest?v=6",
+  "./styles.css?v=7",
+  "./app.js?v=7",
+  "./search.js?v=7",
+  "./speech.js?v=7",
+  "./quiz.js?v=7",
+  "./learning.js?v=7",
+  "./manifest.webmanifest?v=7",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
   "./assets/icon-maskable-512.png",
   "./assets/apple-touch-icon.png",
-  "./data/dictionary.json?v=6",
-  "./data/mandarin-audio.json?v=6",
+  "./data/dictionary.json?v=7",
+  "./data/mandarin-audio.json?v=7",
 ];
 
 const SCOPE_URL = new URL(self.registration.scope);
@@ -143,7 +144,7 @@ async function handleNavigation(request, url) {
 
   // Each worker serves the document and modules from one immutable shell version.
   // Versioned module URLs let the previous production worker safely load this
-  // release's HTML during the one-time v4 -> v6 transition.
+  // release's HTML while an older installed version is still controlling a tab.
   const cached =
     (await matchBestEffort(SHELL_CACHE, INDEX_URL)) ||
     (await matchBestEffort(SHELL_CACHE, ROOT_URL));
@@ -236,6 +237,12 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== SCOPE_URL.origin) return;
 
   if (isAudioRequest(url)) {
+    // app.js writes bulk downloads to this cache itself so it can report quota,
+    // cancellation, and retry status without writing every response twice.
+    if (request.headers.get(BULK_DOWNLOAD_HEADER) === "1") {
+      event.respondWith(fetch(request));
+      return;
+    }
     event.respondWith(cacheFirstAudio(event, request));
     return;
   }

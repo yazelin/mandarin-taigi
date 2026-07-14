@@ -24,11 +24,11 @@
     <meta property="og:url" content="https://yazelin.github.io/mandarin-taigi/" />
     <meta
       property="og:image"
-      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=2"
+      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=3"
     />
     <meta
       property="og:image:secure_url"
-      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=2"
+      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=3"
     />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
@@ -42,13 +42,13 @@
     />
     <meta
       name="twitter:image"
-      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=2"
+      content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=3"
     />
     <meta name="twitter:image:alt" content="國台語詞語對照：這個詞，台語按怎講？" />
-    <link rel="manifest" href="./manifest.webmanifest?v=6" />
+    <link rel="manifest" href="./manifest.webmanifest?v=7" />
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles.css?v=6" />
+    <link rel="stylesheet" href="./styles.css?v=7" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -134,7 +134,7 @@
       <section id="results" class="results dictionary-view" aria-label="查詢結果" tabindex="-1"></section>
 
       <section class="stats dictionary-view" aria-label="詞庫統計">
-        <div><strong id="term-count">—</strong><span>華語詞目</span></div>
+        <div><strong id="term-count">—</strong><span>可查詞目</span></div>
         <div><strong id="comparison-count">—</strong><span>腔口對照</span></div>
         <div><strong id="audio-count">—</strong><span>台語官方發音</span></div>
         <div><strong id="mandarin-audio-count">—</strong><span>華語官方單字朗讀</span></div>
@@ -145,14 +145,14 @@
           <p class="eyebrow">離線使用</p>
           <h2 id="offline-title">第一次開啟後，沒網路也能查</h2>
           <p>
-            網站與詞庫會自動留在這台裝置。台語遊戲語音與華語單字朗讀可分開下載，容量與進度都會清楚顯示。
+            網站與詞庫會自動留在這台裝置。台語音檔平時會嘗試在播放後快取；也可一次下載完整台語語音，確保查詞與挑戰皆可離線播放。
           </p>
           <p>有精確官方華語單字朗讀時會優先使用；其餘多字詞只使用裝置內建的本機華語聲音，找不到時會明確停用。</p>
           <p class="fine-print">你在站內輸入的查詢不會上傳；查詢只放在網址的 # 片段中。清除瀏覽器網站資料時，離線內容也會一併移除。</p>
         </div>
         <div class="offline-card__action">
           <button id="download-taigi-audio" class="button button--primary" type="button" disabled>
-            下載台語遊戲語音包（約 16 MB）
+            下載完整台語語音（約 108 MB）
           </button>
           <button id="download-mandarin-audio" class="button button--secondary" type="button" disabled>
             下載華語單字朗讀（約 39 MB）
@@ -173,7 +173,7 @@
         <div class="about__grid">
           <article>
             <h3>只顯示有根據的答案</h3>
-            <p>結果來自教育部官方「詞彙比較」資料；沒有收錄就誠實說找不到，不會自行編造台語。</p>
+            <p>結果來自教育部官方「詞彙比較」與「臺華共同詞」資料；沒有收錄就誠實說找不到，不會自行編造台語。</p>
           </article>
           <article>
             <h3>腔口保留原樣</h3>
@@ -219,6 +219,6 @@
     </aside>
 
     <noscript><p class="noscript">這個查詢工具需要啟用 JavaScript。</p></noscript>
-    <script type="module" src="./app.js?v=6"></script>
+    <script type="module" src="./app.js?v=7"></script>
   </body>
 </html>

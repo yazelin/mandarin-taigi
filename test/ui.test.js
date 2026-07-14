@@ -28,6 +28,8 @@ test("homepage exposes all learning routes and split offline audio controls", ()
   ]) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
+  assert.ok(html.includes("下載完整台語語音（約 108 MB）"));
+  assert.equal(html.includes("16 MB"), false);
   assert.equal(html.includes('id="download-audio"'), false);
 });
 
@@ -40,6 +42,20 @@ test("app and worker agree on the persistent audio cache name", () => {
   assert.equal(workerCache, appCache);
   assert.ok(appCache.includes(sourceDate), "audio cache must include the dictionary source date");
   assert.ok(appCache.endsWith(mandarinSource), "audio cache must include the Mandarin audio source version");
+});
+
+test("full audio download keeps its app and worker reliability guardrails", () => {
+  const app = read("app.js");
+  const worker = read("sw.js");
+  const appHeader = app.match(/const BULK_DOWNLOAD_HEADER = "([^"]+)"/)?.[1];
+  const workerHeader = worker.match(/const BULK_DOWNLOAD_HEADER = "([^"]+)"/)?.[1];
+
+  assert.equal(workerHeader, appHeader);
+  assert.ok(app.includes("navigator.storage?.estimate?.()"));
+  assert.ok(app.includes("window.confirm("));
+  assert.ok(app.includes("failedBatches >= 3"));
+  assert.ok(app.includes('state.serviceWorkerCompatibility !== "current"'));
+  assert.ok(worker.includes("request.headers.get(BULK_DOWNLOAD_HEADER)"));
 });
 
 test("install manifest provides direct challenge and wrongbook shortcuts", () => {
@@ -55,16 +71,16 @@ test("HTML and every module edge use one versioned release URL", () => {
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "6");
+  assert.equal(appRelease, "7");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /styles\.css\?v=6/);
-  assert.match(html, /app\.js\?v=6/);
+  assert.match(html, /styles\.css\?v=7/);
+  assert.match(html, /app\.js\?v=7/);
   for (const module of ["search", "speech", "learning"]) {
-    assert.ok(app.includes(`./${module}.js?v=6`), module);
+    assert.ok(app.includes(`./${module}.js?v=7`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=6"));
-  assert.ok(app.includes("./data/dictionary.json?v=6"));
-  assert.ok(app.includes("./data/mandarin-audio.json?v=6"));
+  assert.ok(learning.includes("./quiz.js?v=7"));
+  assert.ok(app.includes("./data/dictionary.json?v=7"));
+  assert.ok(app.includes("./data/mandarin-audio.json?v=7"));
   assert.ok(app.includes('register("./sw.js")'));
   assert.ok(app.includes('type: "GET_RELEASE"'));
   assert.ok(worker.includes('type !== "GET_RELEASE"'));

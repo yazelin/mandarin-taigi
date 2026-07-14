@@ -88,6 +88,16 @@ def _comparison_sheets() -> list[str]:
                 _text_cell("3(1)"),
             ]
         ),
+        _row(
+            [
+                _number_cell("4"),
+                _text_cell("臺華共同詞"),
+                _text_cell("想像"),
+                _text_cell("sióng-siōng"),
+                _text_cell("心理活動"),
+                _text_cell("4(1)"),
+            ]
+        ),
     ]
     comparison_rows = [
         _row(
@@ -139,6 +149,7 @@ class BuildDictionaryTests(unittest.TestCase):
             _write_ods(source, _comparison_sheets())
             with zipfile.ZipFile(audio_zip, "w") as archive:
                 archive.writestr("0/1(1).mp3", b"ID3 exact source bytes")
+                archive.writestr("0/4(1).mp3", b"ID3 common source bytes")
                 archive.writestr("0/2(1).mp3", b"ID3 ambiguous source bytes")
                 archive.writestr("0/unrelated.mp3", b"ID3 unrelated")
 
@@ -154,6 +165,9 @@ class BuildDictionaryTests(unittest.TestCase):
             self.assertEqual(
                 (audio_output / "1(1).mp3").read_bytes(), b"ID3 exact source bytes"
             )
+            self.assertEqual(
+                (audio_output / "4(1).mp3").read_bytes(), b"ID3 common source bytes"
+            )
             self.assertFalse((audio_output / "2(1).mp3").exists())
             self.assertFalse((audio_output / "unrelated.mp3").exists())
 
@@ -164,21 +178,29 @@ class BuildDictionaryTests(unittest.TestCase):
         self.assertEqual(
             document["metadata"],
             {
-                "schema_version": 1,
+                "schema_version": 2,
                 "source": build_dictionary.SOURCE_NAME,
                 "source_url": build_dictionary.SOURCE_URL,
                 "source_updated": "2026-07-14",
                 "term_count": 2,
+                "common_entry_count": 1,
+                "searchable_headword_count": 3,
                 "comparison_count": 3,
                 "exact_match_count": 1,
-                "audio_file_count": 1,
+                "audio_file_count": 2,
+                "audio_pack_bytes": len(b"ID3 exact source bytes")
+                + len(b"ID3 common source bytes"),
                 "audio_comparison_count": 1,
+                "comparison_audio_file_count": 1,
+                "common_audio_file_count": 1,
+                "common_audio_entry_count": 1,
             },
         )
         self.assertEqual(
             document["terms"],
             [
                 {
+                    "kind": "comparison",
                     "id": "100",
                     "mandarin": "醫院",
                     "comparisons": [
@@ -197,6 +219,7 @@ class BuildDictionaryTests(unittest.TestCase):
                     ],
                 },
                 {
+                    "kind": "comparison",
                     "id": "101",
                     "mandarin": "看醫生",
                     "comparisons": [
@@ -207,6 +230,20 @@ class BuildDictionaryTests(unittest.TestCase):
                         }
                     ],
                 },
+            ],
+        )
+        self.assertEqual(
+            document["common_entries"],
+            [
+                {
+                    "kind": "common",
+                    "id": "4",
+                    "hanji": "想像",
+                    "romanization": "sióng-siōng",
+                    "type": "臺華共同詞",
+                    "category": "心理活動",
+                    "audio": "../assets/audio/4(1).mp3",
+                }
             ],
         )
 

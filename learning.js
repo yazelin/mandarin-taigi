@@ -5,7 +5,7 @@ import {
   currentWrongCandidates,
   isMastered,
   nextLearningProgress,
-} from "./quiz.js?v=6";
+} from "./quiz.js?v=7";
 
 const STORE_KEY = "mandarin-taigi-learning-v1";
 const STORE_VERSION = 1;
@@ -330,7 +330,7 @@ export function initializeLearning({ dictionary, playAudio, sourceEntryLink }) {
       actions,
       makeElement("p", {
         className: "learning-muted",
-        text: "不計時、不登入。答錯會自動留在這台裝置；連續答對兩次就視為掌握。下載約 16 MB 台語語音包後可完整離線遊玩。",
+        text: "不計時、不登入。答錯會自動留在這台裝置；連續答對兩次就視為掌握。未下載時需連網播放新題，播放過的音檔會快取；下載約 108 MB 完整台語語音後可完整離線遊玩。",
       }),
     );
     shell.append(card);

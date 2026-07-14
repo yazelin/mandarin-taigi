@@ -8,7 +8,7 @@ import vm from "node:vm";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerSource = readFileSync(resolve(repositoryRoot, "sw.js"), "utf8");
 const scope = "https://example.test/mandarin-taigi/";
-const shellCache = "mandarin-taigi-shell-v6";
+const shellCache = "mandarin-taigi-shell-v7";
 const audioCache = "mandarin-taigi-audio-20260713-2014_20260626";
 
 function cacheKey(input) {
@@ -192,7 +192,7 @@ test("an offline hash view falls back to the cached single-page app", async () =
 });
 
 test("versioned dictionary data stays immutable with its app shell", async () => {
-  const dataUrl = `${scope}data/dictionary.json?v=6`;
+  const dataUrl = `${scope}data/dictionary.json?v=7`;
   const worker = createWorker(async () => new Response('{"version":2}'));
   worker.seed(shellCache, dataUrl, '{"version":1}', {
     headers: { "content-type": "application/json" },
@@ -217,6 +217,19 @@ test("audio is cached on demand and served cache-first", async () => {
   assert.equal(worker.fetchCalls.length, 1);
 });
 
+test("bulk audio bypasses runtime caching so the app is the only cache writer", async () => {
+  const audioUrl = `${scope}assets/audio/123.mp3`;
+  const worker = createWorker(async () => new Response("bulk audio", { status: 200 }));
+
+  const response = await worker.dispatchFetch(audioUrl, {
+    headers: { "x-mandarin-taigi-bulk-download": "1" },
+  });
+
+  assert.equal(await response.text(), "bulk audio");
+  assert.equal(worker.puts.length, 0);
+  assert.equal(worker.fetchCalls.length, 1);
+});
+
 test("a cached full audio file satisfies byte-range playback offline", async () => {
   const audioUrl = `${scope}assets/audio/range.mp3`;
   const worker = createWorker(async () => {
@@ -238,7 +251,7 @@ test("a cached full audio file satisfies byte-range playback offline", async () 
 });
 
 test("cached versioned shell assets are immutable for the worker lifetime", async () => {
-  const appUrl = `${scope}app.js?v=6`;
+  const appUrl = `${scope}app.js?v=7`;
   const worker = createWorker(async () => new Response("new app", { status: 200 }));
   worker.seed(shellCache, appUrl, "old app", { status: 200 });
 
@@ -282,12 +295,12 @@ test("activation removes obsolete managed caches but preserves current audio and
 test("worker reports its actual release and audio cache through the update handshake", () => {
   const worker = createWorker(async () => new Response("unused"));
   const reply = worker.dispatchMessage({ type: "GET_RELEASE" });
-  assert.equal(reply.release, "6");
+  assert.equal(reply.release, "7");
   assert.equal(reply.audioCache, audioCache);
   assert.equal(worker.dispatchMessage({ type: "UNKNOWN" }), undefined);
 });
 
 test("quiz and learning modules are part of the install shell", () => {
-  assert.match(workerSource, /"\.\/quiz\.js\?v=6"/);
-  assert.match(workerSource, /"\.\/learning\.js\?v=6"/);
+  assert.match(workerSource, /"\.\/quiz\.js\?v=7"/);
+  assert.match(workerSource, /"\.\/learning\.js\?v=7"/);
 });

@@ -1,21 +1,23 @@
 import {
+  commonMatchesComparison,
   createSearchIndex,
   groupComparisons,
   pickSuggestionTerms,
   searchTermsDetailed,
-} from "./search.js?v=6";
-import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=6";
-import { initializeLearning } from "./learning.js?v=6";
+} from "./search.js?v=7";
+import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=7";
+import { initializeLearning } from "./learning.js?v=7";
 
-const RELEASE_REVISION = "6";
-const DATA_URL = "./data/dictionary.json?v=6";
+const RELEASE_REVISION = "7";
+const DATA_URL = "./data/dictionary.json?v=7";
 const DATA_BASE_URL = new URL(DATA_URL, window.location.href);
-const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=6";
+const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=7";
 const MANDARIN_AUDIO_BASE_URL = new URL(MANDARIN_AUDIO_URL, window.location.href);
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
+const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const OFFICIAL_ENTRY_URL = "https://sutian.moe.edu.tw/zh-hant/su/";
 const AUDIO_PACKS = {
-  taigi: { sizeMb: 16, label: "台語遊戲語音" },
+  taigi: { sizeMb: 108, label: "完整台語語音" },
   mandarin: { sizeMb: 39, label: "華語單字朗讀" },
 };
 
@@ -52,6 +54,7 @@ const state = {
   index: [],
   mandarinAudioEntries: {},
   taigiAudioUrls: [],
+  taigiAudioBytes: 0,
   mandarinAudioUrls: [],
   activeQuery: "",
   mandarinVoice: null,
@@ -250,7 +253,11 @@ function comparisonKey(comparison) {
   return [comparison.hanji, comparison.romanization, comparison.audio || ""].join("\u0000");
 }
 
-function renderComparison(term, comparison, { matched = false } = {}) {
+function renderComparison(
+  term,
+  comparison,
+  { matched = false, tags = comparison.accents || [], tagsLabel = "收錄腔口" } = {},
+) {
   const row = makeElement("article", {
     className: matched ? "comparison comparison--matched" : "comparison",
   });
@@ -269,10 +276,10 @@ function renderComparison(term, comparison, { matched = false } = {}) {
 
   const accents = makeElement("ul", {
     className: "accent-list",
-    attributes: { "aria-label": "收錄腔口" },
+    attributes: { "aria-label": tagsLabel },
   });
-  for (const accent of comparison.accents) {
-    const item = makeElement("li", { className: "accent-tag", text: accent });
+  for (const tag of tags) {
+    const item = makeElement("li", { className: "accent-tag", text: tag });
     accents.append(item);
   }
 
@@ -306,7 +313,49 @@ function renderComparison(term, comparison, { matched = false } = {}) {
   return row;
 }
 
-function renderTerm(term, accent, match = { mandarin: false, comparisons: [] }) {
+function renderCommonComparison(common, matched = false) {
+  return renderComparison(
+    { mandarin: common.hanji },
+    {
+      hanji: common.hanji,
+      romanization: common.romanization,
+      audio: common.audio,
+      term_id: common.id,
+    },
+    {
+      matched,
+      tags: ["臺華共同詞", common.category].filter(Boolean),
+      tagsLabel: "詞目資料",
+    },
+  );
+}
+
+function renderCommonTerm(common, match = {}) {
+  const card = makeElement("article", { className: "result-card" });
+  const header = makeElement("header", { className: "result-card__header" });
+  const titleGroup = makeElement("div");
+  titleGroup.append(
+    makeElement("span", { className: "eyebrow", text: "臺華共同詞" }),
+    makeElement("h2", { className: "result-card__title", text: common.hanji }),
+    makeElement("p", {
+      className: "result-card__speech-note",
+      text: "華語與台語共用相同詞形；教育部此類詞目不另列華語義項。",
+    }),
+  );
+  header.append(titleGroup);
+
+  const comparisonList = makeElement("div", { className: "comparison-list" });
+  comparisonList.append(renderCommonComparison(common, Boolean(match.common || match.mandarin)));
+  card.append(header, comparisonList);
+  return card;
+}
+
+function renderTerm(
+  term,
+  accent,
+  match = { mandarin: false, common: null, comparisons: [] },
+  common = null,
+) {
   const card = makeElement("article", { className: "result-card" });
   const header = makeElement("header", { className: "result-card__header" });
   const titleGroup = makeElement("div");
@@ -342,9 +391,24 @@ function renderTerm(term, accent, match = { mandarin: false, comparisons: [] }) 
   const groups = groupComparisons(term.comparisons, accent).sort(
     (left, right) => Number(matchedKeys.has(comparisonKey(right))) - Number(matchedKeys.has(comparisonKey(left))),
   );
+  const mergedCommon = !accent && common
+    ? groups.find((comparison) => commonMatchesComparison(common, comparison))
+    : null;
+  if (common && !accent && !mergedCommon) {
+    comparisonList.append(renderCommonComparison(common, Boolean(match.common)));
+  }
   for (const comparison of groups) {
+    const includesCommon = comparison === mergedCommon;
     comparisonList.append(
-      renderComparison(term, comparison, { matched: matchedKeys.has(comparisonKey(comparison)) }),
+      renderComparison(term, comparison, {
+        matched: matchedKeys.has(comparisonKey(comparison)) || (includesCommon && Boolean(match.common)),
+        ...(includesCommon
+          ? {
+              tags: [...comparison.accents, "臺華共同詞", common.category].filter(Boolean),
+              tagsLabel: "收錄腔口與詞目資料",
+            }
+          : {}),
+      }),
     );
   }
 
@@ -383,14 +447,20 @@ function runSearch(query, { updateUrl = true, limit = 40 } = {}) {
     empty.append(
       makeElement("h2", { text: "目前找不到直接對照" }),
       makeElement("p", {
-        text: "這個版本只呈現教育部已收錄的華台詞彙比較，不會用 AI 猜答案。可換短一點的詞再試。",
+        text: "本站只呈現教育部已收錄的華台詞彙比較與臺華共同詞，不會用 AI 猜答案。可換短一點的詞再試。",
       }),
     );
     elements.results.append(empty);
     setStatus(`找不到「${cleanQuery}」的直接對照。`, "error");
   } else {
     const fragment = document.createDocumentFragment();
-    for (const result of search.results) fragment.append(renderTerm(result.term, accent, result.match));
+    for (const result of search.results) {
+      fragment.append(
+        result.term
+          ? renderTerm(result.term, accent, result.match, result.common)
+          : renderCommonTerm(result.common, result.match),
+      );
+    }
     elements.results.append(fragment);
     if (search.truncated) {
       const more = makeElement("button", {
@@ -401,11 +471,11 @@ function runSearch(query, { updateUrl = true, limit = 40 } = {}) {
       more.addEventListener("click", () => runSearch(cleanQuery, { updateUrl: false, limit: limit + 40 }));
       elements.results.append(more);
       setStatus(
-        `共找到 ${formatNumber(search.total)} 個華語詞目，先顯示前 ${formatNumber(search.results.length)} 個。`,
+        `共找到 ${formatNumber(search.total)} 個詞目，先顯示前 ${formatNumber(search.results.length)} 個。`,
         "success",
       );
     } else {
-      setStatus(`找到 ${formatNumber(search.total)} 個華語詞目。`, "success");
+      setStatus(`找到 ${formatNumber(search.total)} 個詞目。`, "success");
     }
   }
 
@@ -457,6 +527,10 @@ function collectAudioUrls(terms) {
   ];
 }
 
+function collectCommonAudioUrls(entries) {
+  return [...new Set((entries || []).map((entry) => entry.audio).filter(Boolean))];
+}
+
 function renderSuggestions() {
   const suggestions = pickSuggestionTerms(state.dictionary?.terms || [], 4);
   const fragment = document.createDocumentFragment();
@@ -477,13 +551,16 @@ function audioPackUrls(kind) {
 }
 
 function serviceWorkerBlocksAudioDownload() {
-  return ["checking", "outdated"].includes(state.serviceWorkerCompatibility);
+  return state.serviceWorkerCompatibility !== "current";
 }
 
 function serviceWorkerStatusMessage() {
   if (state.serviceWorkerCompatibility === "checking") return "正在確認離線版本，請稍候…";
   if (state.serviceWorkerCompatibility === "outdated") {
     return "網站已更新。請關閉所有本站分頁後重新開啟，再下載離線語音包。";
+  }
+  if (state.serviceWorkerCompatibility === "none") {
+    return "離線服務尚未接手；查詞仍可使用，請重新整理後再下載完整語音。";
   }
   return "";
 }
@@ -529,7 +606,7 @@ function setAudioDownloadControls(running) {
   const waitingForUpdate = serviceWorkerBlocksAudioDownload();
   elements.downloadTaigiAudio.disabled = running || waitingForUpdate || state.taigiAudioUrls.length === 0;
   elements.downloadMandarinAudio.disabled = running || waitingForUpdate || state.mandarinAudioUrls.length === 0;
-  elements.clearOfflineAudio.disabled = running || waitingForUpdate;
+  elements.clearOfflineAudio.disabled = running;
   elements.cancelAudioDownload.hidden = !running;
 }
 
@@ -543,17 +620,17 @@ async function updateOfflineAudioState(message = "") {
     elements.clearOfflineAudio.hidden = taigiCount + mandarinCount === 0;
     elements.downloadTaigiAudio.textContent =
       taigiCount === state.taigiAudioUrls.length && taigiCount > 0
-        ? `台語遊戲語音已下載（${formatNumber(taigiCount)} 個）`
-        : `下載台語遊戲語音包（約 ${AUDIO_PACKS.taigi.sizeMb} MB）`;
+        ? `完整台語語音已下載（${formatNumber(taigiCount)} 個）`
+        : `下載完整台語語音（約 ${AUDIO_PACKS.taigi.sizeMb} MB）`;
     elements.downloadMandarinAudio.textContent =
       mandarinCount === state.mandarinAudioUrls.length && mandarinCount > 0
         ? `華語單字朗讀已下載（${formatNumber(mandarinCount)} 個）`
         : `下載華語單字朗讀（約 ${AUDIO_PACKS.mandarin.sizeMb} MB）`;
     const workerMessage = serviceWorkerStatusMessage();
-    if (workerMessage) {
-      elements.offlineStatus.textContent = workerMessage;
-    } else if (message) {
+    if (message) {
       elements.offlineStatus.textContent = message;
+    } else if (workerMessage) {
+      elements.offlineStatus.textContent = workerMessage;
     } else if (taigiCount + mandarinCount > 0) {
       elements.offlineStatus.textContent = `已離線：${formatNumber(taigiCount)} 個台語、${formatNumber(
         mandarinCount,
@@ -584,33 +661,85 @@ async function downloadOfflineAudio(kind) {
     elements.offlineStatus.textContent = "音檔索引尚未準備完成，請稍後再試。";
     return;
   }
+
+  let cache;
+  let cachedUrls;
+  try {
+    cache = await caches.open(AUDIO_CACHE);
+    cachedUrls = new Set((await cache.keys()).map((request) => request.url));
+  } catch {
+    elements.offlineStatus.textContent = `${pack.label}無法儲存，請確認瀏覽器空間後再試。`;
+    return;
+  }
+
+  const missingCount = urls.filter((url) => !cachedUrls.has(url)).length;
+  if (missingCount === 0) {
+    await updateOfflineAudioState(`${pack.label}已完整下載。`);
+    return;
+  }
+
+  const packBytes =
+    kind === "taigi" && state.taigiAudioBytes > 0
+      ? state.taigiAudioBytes
+      : pack.sizeMb * 1_000_000;
+  const estimatedBytes = Math.ceil((packBytes * missingCount) / urls.length);
+  const safetyBytes = Math.max(1_000_000, Math.ceil(estimatedBytes * 0.1));
+  try {
+    const estimate = await navigator.storage?.estimate?.();
+    const available = Number(estimate?.quota) - Number(estimate?.usage);
+    if (Number.isFinite(available) && available < estimatedBytes + safetyBytes) {
+      elements.offlineStatus.textContent = `可用儲存空間不足；尚需約 ${formatNumber(
+        Math.ceil(estimatedBytes / 1_000_000),
+      )} MB，請先釋放空間。`;
+      return;
+    }
+  } catch {
+    // Browsers without quota estimates still get CacheStorage's quota fallback.
+  }
+
+  const confirmed = window.confirm(
+    `將下載約 ${formatNumber(Math.ceil(estimatedBytes / 1_000_000))} MB（${formatNumber(
+      missingCount,
+    )} 個檔案）。建議使用 Wi-Fi；可隨時取消並稍後續傳。要繼續嗎？`,
+  );
+  if (!confirmed) return;
+
   navigator.storage?.persist?.().catch(() => {});
-  const task = { cancelled: false, outOfSpace: false, controllers: new Set() };
+  const task = {
+    cancelled: false,
+    networkInterrupted: false,
+    outOfSpace: false,
+    controllers: new Set(),
+  };
   state.audioDownload = task;
   setAudioDownloadControls(true);
   let completed = 0;
   let failed = 0;
   try {
-    const cache = await caches.open(AUDIO_CACHE);
-    const cachedUrls = new Set((await cache.keys()).map((request) => request.url));
-
     async function cacheOne(url) {
       const controller = new AbortController();
       task.controllers.add(controller);
+      let attempted = false;
+      let saved = false;
       try {
         if (!cachedUrls.has(url) && !task.cancelled) {
-          const response = await fetch(url, { signal: controller.signal });
+          attempted = true;
+          const response = await fetch(url, {
+            signal: controller.signal,
+            headers: { [BULK_DOWNLOAD_HEADER]: "1" },
+          });
           if (!response.ok) throw new Error(String(response.status));
           await cache.put(url, response);
           cachedUrls.add(url);
+          saved = true;
         }
       } catch (error) {
-        if (error.name === "QuotaExceededError") {
+        if (error?.name === "QuotaExceededError") {
           task.outOfSpace = true;
           task.cancelled = true;
           failed += 1;
           for (const activeController of task.controllers) activeController.abort();
-        } else if (error.name !== "AbortError") {
+        } else if (error?.name !== "AbortError") {
           failed += 1;
         }
       } finally {
@@ -620,19 +749,32 @@ async function downloadOfflineAudio(kind) {
           ? `正在取消${pack.label}下載…`
           : `正在儲存${pack.label}：${formatNumber(completed)} / ${formatNumber(urls.length)}`;
       }
+      return { attempted, saved };
     }
 
+    let failedBatches = 0;
     for (let index = 0; index < urls.length && !task.cancelled; index += 6) {
-      await Promise.all(urls.slice(index, index + 6).map(cacheOne));
+      const results = await Promise.all(urls.slice(index, index + 6).map(cacheOne));
+      const attempted = results.filter((result) => result.attempted).length;
+      const saved = results.filter((result) => result.saved).length;
+      if (attempted > 0 && saved === 0) failedBatches += 1;
+      else if (saved > 0) failedBatches = 0;
+
+      if (!navigator.onLine || failedBatches >= 3) {
+        task.networkInterrupted = true;
+        task.cancelled = true;
+      }
     }
 
     const finalMessage = task.outOfSpace
       ? `儲存空間不足，${pack.label}下載已停止；已完成的檔案仍可離線使用。`
-      : task.cancelled
-      ? "已取消下載；已完成的檔案仍可離線使用。"
-      : failed
-        ? `已儲存 ${formatNumber(urls.length - failed)} 個${pack.label}，${formatNumber(failed)} 個失敗；可再按一次重試。`
-        : `完成：${formatNumber(urls.length)} 個${pack.label}已可離線使用。`;
+      : task.networkInterrupted
+        ? `網路中斷，${pack.label}下載已暫停；恢復連線後再按一次即可續傳。`
+        : task.cancelled
+          ? "已取消下載；已完成的檔案仍可離線使用。"
+          : failed
+            ? `已儲存 ${formatNumber(urls.length - failed)} 個${pack.label}，${formatNumber(failed)} 個失敗；可再按一次重試。`
+            : `完成：${formatNumber(urls.length)} 個${pack.label}已可離線使用。`;
     await updateOfflineAudioState(finalMessage);
   } catch {
     elements.offlineStatus.textContent = `${pack.label}無法儲存，請確認瀏覽器空間後再試。`;
@@ -647,7 +789,9 @@ async function loadDictionary() {
     const response = await fetch(DATA_URL);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const dictionary = await response.json();
-    if (!Array.isArray(dictionary.terms)) throw new Error("詞庫格式不正確");
+    if (!Array.isArray(dictionary.terms) || !Array.isArray(dictionary.common_entries)) {
+      throw new Error("詞庫格式不正確");
+    }
 
     let mandarinAudioEntries = {};
     let mandarinAudioWarning = "";
@@ -665,8 +809,14 @@ async function loadDictionary() {
 
     state.dictionary = dictionary;
     state.mandarinAudioEntries = mandarinAudioEntries;
-    state.index = createSearchIndex(dictionary.terms);
-    state.taigiAudioUrls = collectAudioUrls(dictionary.terms).map(resolveAudioUrl);
+    state.index = createSearchIndex(dictionary);
+    state.taigiAudioUrls = [
+      ...new Set([
+        ...collectAudioUrls(dictionary.terms),
+        ...collectCommonAudioUrls(dictionary.common_entries),
+      ]),
+    ].map(resolveAudioUrl);
+    state.taigiAudioBytes = Number(dictionary.metadata?.audio_pack_bytes) || 0;
     state.mandarinAudioUrls = Object.values(mandarinAudioEntries)
       .map((entry) => entry.audio)
       .filter(Boolean)
@@ -675,7 +825,9 @@ async function loadDictionary() {
     renderSuggestions();
 
     const metadata = dictionary.metadata || {};
-    elements.termCount.textContent = formatNumber(metadata.term_count ?? dictionary.terms.length);
+    elements.termCount.textContent = formatNumber(
+      metadata.searchable_headword_count ?? dictionary.terms.length + dictionary.common_entries.length,
+    );
     elements.comparisonCount.textContent = formatNumber(
       metadata.comparison_count ?? dictionary.terms.reduce((sum, term) => sum + term.comparisons.length, 0),
     );
@@ -739,7 +891,7 @@ elements.cancelAudioDownload.addEventListener("click", () => {
 });
 elements.clearOfflineAudio.addEventListener("click", async () => {
   if (!("caches" in window)) return;
-  if (state.audioDownload || serviceWorkerBlocksAudioDownload()) return;
+  if (state.audioDownload) return;
   if (!window.confirm("清除已下載與播放過的離線語音？詞庫與學習紀錄會保留。")) return;
   try {
     await caches.delete(AUDIO_CACHE);
@@ -792,7 +944,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
 window.addEventListener("appinstalled", () => {
   state.deferredInstallPrompt = null;
   elements.installApp.hidden = true;
-  elements.offlineStatus.textContent = "App 已安裝；下載台語遊戲語音包後即可完整離線挑戰。";
+  elements.offlineStatus.textContent = "App 已安裝；下載完整台語語音後，查詞與挑戰皆可完整離線播放。";
 });
 elements.installApp.addEventListener("click", async () => {
   if (!state.deferredInstallPrompt) {

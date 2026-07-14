@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(resolve(repositoryRoot, "index.html"), "utf8");
 const canonicalUrl = "https://yazelin.github.io/mandarin-taigi/";
-const ogImageUrl = `${canonicalUrl}assets/og-image.png?v=2`;
+const ogImageUrl = `${canonicalUrl}assets/og-image.png?v=3`;
 
 test("homepage exposes complete canonical and social sharing metadata", () => {
   assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl}"`));
@@ -23,6 +23,13 @@ test("Open Graph PNG has the declared 1200 by 630 dimensions", () => {
   assert.equal(png.subarray(1, 4).toString(), "PNG");
   assert.equal(png.readUInt32BE(16), 1200);
   assert.equal(png.readUInt32BE(20), 630);
+});
+
+test("Open Graph source advertises the complete searchable corpus", () => {
+  const svg = readFileSync(resolve(repositoryRoot, "assets/og-image.svg"), "utf8");
+  assert.match(svg, /6,505 可搜尋詞目/);
+  assert.match(svg, /6,607 台語音/);
+  assert.doesNotMatch(svg, /1,093 台語音/);
 });
 
 test("structured data and sitemap use the public Pages URL", () => {

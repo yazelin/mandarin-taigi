@@ -65,8 +65,27 @@ export function normalizeRomanization(value = "") {
     .trim();
 }
 
-export function createSearchIndex(terms = []) {
-  return terms.map((term) => {
+function dictionaryCollections(input, explicitCommonEntries = []) {
+  if (Array.isArray(input)) {
+    return {
+      terms: input,
+      commonEntries: Array.isArray(explicitCommonEntries) ? explicitCommonEntries : [],
+    };
+  }
+  return {
+    terms: Array.isArray(input?.terms) ? input.terms : [],
+    commonEntries: Array.isArray(input?.common_entries) ? input.common_entries : [],
+  };
+}
+
+function commonRomanizations(value = "") {
+  return String(value)
+    .split("/")
+    .map(normalizeRomanization)
+    .filter(Boolean);
+}
+
+function comparisonIndexItem(term) {
     const comparisons = Array.isArray(term.comparisons) ? term.comparisons : [];
     const indexedComparisons = comparisons.map((comparison, index) => ({
       index,
@@ -77,13 +96,53 @@ export function createSearchIndex(terms = []) {
     }));
     return {
       term,
+      common: null,
+      display: term.mandarin,
       mandarin: normalizeText(term.mandarin),
       comparisons: indexedComparisons,
       hanji: indexedComparisons.map((item) => item.hanji),
       romanization: indexedComparisons.map((item) => item.romanization),
       accents: indexedComparisons.map((item) => item.accent),
     };
-  });
+}
+
+export function createSearchIndex(input = [], explicitCommonEntries = []) {
+  const { terms, commonEntries } = dictionaryCollections(input, explicitCommonEntries);
+  const index = terms.map(comparisonIndexItem);
+  const comparisonByMandarin = new Map();
+  for (const item of index) {
+    if (!comparisonByMandarin.has(item.mandarin)) comparisonByMandarin.set(item.mandarin, item);
+  }
+
+  for (const common of commonEntries) {
+    if (!common || typeof common !== "object") continue;
+    const hanji = normalizeText(common.hanji);
+    const romanizations = commonRomanizations(common.romanization);
+    if (!hanji || romanizations.length === 0) continue;
+
+    const existing = comparisonByMandarin.get(hanji);
+    if (existing && !existing.common) {
+      existing.common = common;
+      existing.commonHanji = hanji;
+      existing.commonRomanizations = romanizations;
+      continue;
+    }
+
+    index.push({
+      term: null,
+      common,
+      display: common.hanji,
+      mandarin: hanji,
+      commonHanji: hanji,
+      commonRomanizations: romanizations,
+      comparisons: [],
+      hanji: [],
+      romanization: [],
+      accents: [],
+    });
+  }
+
+  return index;
 }
 
 function fieldScore(field, query, scores) {
@@ -111,7 +170,27 @@ export function searchTermsDetailed(index, query, options = {}) {
       prefix: 900,
       contains: 650,
     });
-    let score = mandarinScore;
+    const commonHanjiScore = accent
+      ? 0
+      : fieldScore(item.commonHanji, textQuery, {
+          exact: 1150,
+          prefix: 850,
+          contains: 625,
+        });
+    const commonRomanizationScore = accent
+      ? 0
+      : Math.max(
+          0,
+          ...(item.commonRomanizations || []).map((romanization) =>
+            fieldScore(romanization, romanQuery, {
+              exact: 1050,
+              prefix: 780,
+              contains: 560,
+            }),
+          ),
+        );
+    const commonScore = Math.max(commonHanjiScore, commonRomanizationScore);
+    let score = Math.max(mandarinScore, commonScore);
     const comparisonMatches = [];
 
     for (const comparison of item.comparisons) {
@@ -146,9 +225,21 @@ export function searchTermsDetailed(index, query, options = {}) {
     if (score > 0) {
       matches.push({
         term: item.term,
+        common: item.common,
+        display: item.display,
         score,
         match: {
           mandarin: mandarinScore > 0,
+          common:
+            commonScore > 0
+              ? {
+                  fields: [
+                    ...(commonHanjiScore > 0 ? ["hanji"] : []),
+                    ...(commonRomanizationScore > 0 ? ["romanization"] : []),
+                  ],
+                  score: commonScore,
+                }
+              : null,
           comparisons: comparisonMatches,
         },
       });
@@ -156,7 +247,7 @@ export function searchTermsDetailed(index, query, options = {}) {
   }
 
   matches.sort(
-    (a, b) => b.score - a.score || a.term.mandarin.localeCompare(b.term.mandarin, "zh-Hant-TW"),
+    (a, b) => b.score - a.score || a.display.localeCompare(b.display, "zh-Hant-TW"),
   );
   const results = matches.slice(0, limit);
   return {
@@ -167,7 +258,25 @@ export function searchTermsDetailed(index, query, options = {}) {
 }
 
 export function searchTerms(index, query, options = {}) {
-  return searchTermsDetailed(index, query, options).results.map(({ term }) => term);
+  return searchTermsDetailed(index, query, options).results.map(({ term, common }) =>
+    term || {
+      kind: "common",
+      id: `common:${common.id}`,
+      mandarin: common.hanji,
+      comparisons: [],
+      common,
+    },
+  );
+}
+
+export function commonMatchesComparison(common, comparison) {
+  return Boolean(
+    common &&
+      comparison &&
+      String(common.id || "") === String(comparison.term_id || "") &&
+      common.hanji === comparison.hanji &&
+      common.romanization === comparison.romanization,
+  );
 }
 
 export function groupComparisons(comparisons = [], accent = "") {

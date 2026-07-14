@@ -71,6 +71,7 @@ TARGET_COLUMNS = {
 
 FULL_DICTIONARY_SHEETS = ("詞目", "義項", "例句")
 COMPARISON_SHEETS = ("詞目", "詞彙比較")
+COMMON_ENTRY_TYPE = "臺華共同詞"
 
 SOURCE_NAME = "教育部《臺灣台語常用詞辭典》"
 SOURCE_URL = "https://sutian.moe.edu.tw/zh-hant/siongkuantsuguan/"
@@ -390,7 +391,7 @@ def _build_comparison_data(
     ods_path: str | os.PathLike[str],
     *,
     source_updated: str | None = None,
-) -> tuple[dict[str, Any], list[tuple[dict[str, Any], str]]]:
+) -> tuple[dict[str, Any], list[tuple[dict[str, Any], str, str]]]:
     """Build exact 華語-to-臺語 comparisons and retain matched audio stems."""
 
     source_path = Path(ods_path)
@@ -398,10 +399,43 @@ def _build_comparison_data(
     _validate_headers(headers, COMPARISON_SHEETS)
 
     entry_candidates: dict[tuple[str, str], list[dict[str, str]]] = {}
+    common_entries: list[dict[str, Any]] = []
+    common_ids: set[str] = set()
+    common_hanji: set[str] = set()
+    matched_audio: list[tuple[dict[str, Any], str, str]] = []
     for row in tables["詞目"]:
         exact_key = (row.get("漢字", ""), row.get("羅馬字", ""))
         if all(exact_key):
             entry_candidates.setdefault(exact_key, []).append(row)
+
+        if row.get("詞目類型") != COMMON_ENTRY_TYPE:
+            continue
+
+        original_id, entry_key = _required_id(row, "詞目id", "詞目")
+        hanji, romanization = exact_key
+        if not hanji or not romanization:
+            raise DictionaryBuildError(
+                f"{COMMON_ENTRY_TYPE} {original_id} must have 漢字 and 羅馬字"
+            )
+        if entry_key in common_ids:
+            raise DictionaryBuildError(f"Duplicate {COMMON_ENTRY_TYPE} 詞目id: {original_id}")
+        if hanji in common_hanji:
+            raise DictionaryBuildError(f"Duplicate {COMMON_ENTRY_TYPE} 漢字: {hanji}")
+
+        common_ids.add(entry_key)
+        common_hanji.add(hanji)
+        common_entry: dict[str, Any] = {
+            "kind": "common",
+            "id": original_id,
+            "hanji": hanji,
+            "romanization": romanization,
+            "type": COMMON_ENTRY_TYPE,
+            "category": row.get("分類", ""),
+        }
+        common_entries.append(common_entry)
+        audio_stem = row.get("羅馬字音檔檔名", "")
+        if audio_stem:
+            matched_audio.append((common_entry, audio_stem, "common"))
 
     # A comparison may receive a term ID only when the exact source spelling
     # and exact romanization resolve to one 詞目.  Ambiguous exact matches are
@@ -427,7 +461,6 @@ def _build_comparison_data(
 
     terms: list[dict[str, Any]] = []
     terms_by_id: dict[str, dict[str, Any]] = {}
-    matched_audio: list[tuple[dict[str, Any], str]] = []
     exact_match_count = 0
 
     for row in tables["詞彙比較"]:
@@ -435,7 +468,12 @@ def _build_comparison_data(
         mandarin = row.get("華語詞目", "")
         term = terms_by_id.get(term_key)
         if term is None:
-            term = {"id": original_id, "mandarin": mandarin, "comparisons": []}
+            term = {
+                "kind": "comparison",
+                "id": original_id,
+                "mandarin": mandarin,
+                "comparisons": [],
+            }
             terms.append(term)
             terms_by_id[term_key] = term
         elif term["mandarin"] != mandarin:
@@ -457,23 +495,36 @@ def _build_comparison_data(
             comparison["term_id"] = term_id
             exact_match_count += 1
             if audio_stem:
-                matched_audio.append((comparison, audio_stem))
+                matched_audio.append((comparison, audio_stem, "comparison"))
 
         term["comparisons"].append(comparison)
 
     comparison_count = sum(len(term["comparisons"]) for term in terms)
     metadata = {
-        "schema_version": 1,
+        "schema_version": 2,
         "source": SOURCE_NAME,
         "source_url": SOURCE_URL,
         "term_count": len(terms),
+        "common_entry_count": len(common_entries),
+        "searchable_headword_count": len(
+            {term["mandarin"] for term in terms}
+            | {entry["hanji"] for entry in common_entries}
+        ),
         "comparison_count": comparison_count,
         "exact_match_count": exact_match_count,
         "audio_file_count": 0,
+        "audio_pack_bytes": 0,
         "audio_comparison_count": 0,
+        "comparison_audio_file_count": 0,
+        "common_audio_file_count": 0,
+        "common_audio_entry_count": 0,
     }
     _add_source_updated(metadata, source_updated)
-    document = {"metadata": metadata, "terms": terms}
+    document = {
+        "metadata": metadata,
+        "terms": terms,
+        "common_entries": common_entries,
+    }
     return document, matched_audio
 
 
@@ -516,17 +567,17 @@ def _validate_zip_member(info: zipfile.ZipInfo) -> PurePosixPath:
 
 def _attach_audio(
     document: dict[str, Any],
-    matched_audio: list[tuple[dict[str, Any], str]],
+    matched_audio: list[tuple[dict[str, Any], str, str]],
     audio_zip: Path,
     audio_output: Path,
     json_output: Path,
 ) -> None:
     """Copy only exact-match MP3 bytes and add paths relative to the JSON file."""
 
-    comparisons_by_filename: dict[str, list[dict[str, Any]]] = {}
-    for comparison, audio_stem in matched_audio:
+    records_by_filename: dict[str, list[tuple[dict[str, Any], str]]] = {}
+    for record, audio_stem, kind in matched_audio:
         filename = _safe_audio_filename(audio_stem)
-        comparisons_by_filename.setdefault(filename, []).append(comparison)
+        records_by_filename.setdefault(filename, []).append((record, kind))
 
     try:
         archive = zipfile.ZipFile(audio_zip)
@@ -540,13 +591,15 @@ def _attach_audio(
     with archive:
         for info in archive.infolist():
             path = _validate_zip_member(info)
-            if info.is_dir() or path.name not in comparisons_by_filename:
+            if info.is_dir() or path.name not in records_by_filename:
                 continue
             archive_members.setdefault(path.name, []).append(info)
 
         extracted_files = 0
-        linked_comparisons = 0
-        for filename, comparisons in comparisons_by_filename.items():
+        extracted_bytes = 0
+        linked_records = {"comparison": 0, "common": 0}
+        filenames_by_kind = {"comparison": set(), "common": set()}
+        for filename, records in records_by_filename.items():
             members = archive_members.get(filename, [])
             if not members:
                 continue
@@ -581,13 +634,23 @@ def _attach_audio(
             relative_path = Path(
                 os.path.relpath(destination, start=json_output.parent)
             ).as_posix()
-            for comparison in comparisons:
-                comparison["audio"] = relative_path
+            for record, kind in records:
+                record["audio"] = relative_path
+                linked_records[kind] += 1
+                filenames_by_kind[kind].add(filename)
             extracted_files += 1
-            linked_comparisons += len(comparisons)
+            extracted_bytes += members[0].file_size
 
     document["metadata"]["audio_file_count"] = extracted_files
-    document["metadata"]["audio_comparison_count"] = linked_comparisons
+    document["metadata"]["audio_pack_bytes"] = extracted_bytes
+    document["metadata"]["audio_comparison_count"] = linked_records["comparison"]
+    document["metadata"]["comparison_audio_file_count"] = len(
+        filenames_by_kind["comparison"]
+    )
+    document["metadata"]["common_audio_file_count"] = len(
+        filenames_by_kind["common"]
+    )
+    document["metadata"]["common_audio_entry_count"] = linked_records["common"]
 
 
 def _write_json(document: dict[str, Any], destination: Path) -> None:
@@ -712,6 +775,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         print(
             "Built "
             f"{metadata['term_count']} Mandarin terms and "
+            f"{metadata['common_entry_count']} common headwords with "
             f"{metadata['comparison_count']} Taiwanese comparisons "
             f"({metadata['exact_match_count']} exact dictionary matches, "
             f"{metadata['audio_file_count']} MP3 files) -> {args.output}"

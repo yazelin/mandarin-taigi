@@ -33,6 +33,13 @@ export const QUIZ_TEXT_DENYLIST = Object.freeze([
   "陰莖",
   "陰囊",
   "睪丸",
+  "性愛",
+  "色情",
+  "強姦",
+  "精子",
+  "肛門",
+  "胸罩",
+  "一堆屎",
   "乳房",
   "月經",
   "月經布",
@@ -108,6 +115,10 @@ function inputTerms(input) {
   return Array.isArray(input?.terms) ? input.terms : [];
 }
 
+function inputCommonEntries(input) {
+  return Array.isArray(input?.common_entries) ? input.common_entries : [];
+}
+
 /**
  * Build safe, audio-first quiz candidates from dictionary terms.
  *
@@ -121,6 +132,7 @@ export function buildQuizPool(input = []) {
 
   for (const term of inputTerms(input)) {
     if (!term || typeof term !== "object") continue;
+    if (term.kind && term.kind !== "comparison") continue;
     const answer = normalizeValue(term.mandarin);
     const comparisons = Array.isArray(term.comparisons) ? term.comparisons : [];
 
@@ -143,6 +155,28 @@ export function buildQuizPool(input = []) {
       addMapping(answersByAudio, audio, answer);
       addMapping(answersByForm, formKey(hanji, romanization), answer);
     }
+  }
+
+  for (const common of inputCommonEntries(input)) {
+    if (!common || typeof common !== "object") continue;
+    if (common.kind && common.kind !== "common") continue;
+    const answer = normalizeValue(common.hanji);
+    const audio = normalizeValue(common.audio);
+    if (!audio) continue;
+
+    const hanji = normalizeValue(common.hanji);
+    const romanization = normalizeValue(common.romanization);
+    const row = {
+      answer,
+      audio,
+      hanji,
+      romanization,
+      accent: "",
+      term_id: normalizeValue(common.id),
+    };
+    rows.push(row);
+    addMapping(answersByAudio, audio, answer);
+    addMapping(answersByForm, formKey(hanji, romanization), answer);
   }
 
   const ambiguousAudio = ambiguousKeys(answersByAudio);
