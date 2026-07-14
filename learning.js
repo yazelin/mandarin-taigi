@@ -5,7 +5,7 @@ import {
   currentWrongCandidates,
   isMastered,
   nextLearningProgress,
-} from "./quiz.js?v=7";
+} from "./quiz.js?v=8";
 
 const STORE_KEY = "mandarin-taigi-learning-v1";
 const STORE_VERSION = 1;
@@ -253,15 +253,22 @@ export function initializeLearning({ dictionary, playAudio, sourceEntryLink }) {
     });
   }
 
+  function showAbout() {
+    for (const section of dictionaryViews) section.hidden = section.id !== "about";
+    view.hidden = true;
+    updateNav("about");
+    const about = document.querySelector("#about");
+    window.requestAnimationFrame(() => {
+      about?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0 });
+    });
+  }
+
   function routeFromHash() {
     const route = window.location.hash.slice(1).split("?", 1)[0];
     if (["challenge", "wrongbook", "flashcards"].includes(route)) showLearning(route);
-    else {
-      showDictionary();
-      if (route === "about") {
-        window.requestAnimationFrame(() => document.querySelector("#about")?.scrollIntoView({ block: "start" }));
-      }
-    }
+    else if (route === "about") showAbout();
+    else showDictionary();
   }
 
   for (const link of navLinks) {

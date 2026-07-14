@@ -4,14 +4,15 @@ import {
   groupComparisons,
   pickSuggestionTerms,
   searchTermsDetailed,
-} from "./search.js?v=7";
-import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=7";
-import { initializeLearning } from "./learning.js?v=7";
+} from "./search.js?v=8";
+import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=8";
+import { initializeLearning } from "./learning.js?v=8";
+import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=8";
 
-const RELEASE_REVISION = "7";
-const DATA_URL = "./data/dictionary.json?v=7";
+const RELEASE_REVISION = "8";
+const DATA_URL = "./data/dictionary.json?v=8";
 const DATA_BASE_URL = new URL(DATA_URL, window.location.href);
-const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=7";
+const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=8";
 const MANDARIN_AUDIO_BASE_URL = new URL(MANDARIN_AUDIO_URL, window.location.href);
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
@@ -64,8 +65,13 @@ const state = {
   deferredInstallPrompt: null,
   learning: null,
   appReady: false,
-  serviceWorkerCompatibility: navigator.serviceWorker?.controller ? "checking" : "none",
+  serviceWorkerCompatibility: "serviceWorker" in navigator ? "checking" : "none",
+  serviceWorkerCheck: 0,
+  serviceWorkerRegistration: null,
 };
+
+const watchedRegistrations = new WeakSet();
+const watchedWorkers = new WeakSet();
 
 function setStatus(message, kind = "") {
   elements.status.textContent = message;
@@ -551,21 +557,27 @@ function audioPackUrls(kind) {
 }
 
 function serviceWorkerBlocksAudioDownload() {
-  return state.serviceWorkerCompatibility !== "current";
+  return !canDownloadOfflineAudio(state.serviceWorkerCompatibility);
 }
 
 function serviceWorkerStatusMessage() {
   if (state.serviceWorkerCompatibility === "checking") return "正在確認離線版本，請稍候…";
   if (state.serviceWorkerCompatibility === "outdated") {
-    return "網站已更新。請關閉所有本站分頁後重新開啟，再下載離線語音包。";
+    return "網站已更新；請完全關閉本站所有分頁與 App 後再開一次，下載按鈕就會啟用。";
+  }
+  if (state.serviceWorkerCompatibility === "installed") {
+    return "離線服務已安裝，可直接下載；關閉本頁再開後即可完整離線播放。";
+  }
+  if (state.serviceWorkerCompatibility === "unverified") {
+    return "目前無法確認離線服務版本；查詞仍可使用，請稍後再試。";
   }
   if (state.serviceWorkerCompatibility === "none") {
-    return "離線服務尚未接手；查詞仍可使用，請重新整理後再下載完整語音。";
+    return "離線功能目前無法啟用；查詞仍可使用。";
   }
   return "";
 }
 
-function queryControllerRelease(controller, timeoutMs = 1500) {
+function queryWorkerRelease(worker, timeoutMs = 1500) {
   return new Promise((resolve) => {
     const channel = new MessageChannel();
     let finished = false;
@@ -579,25 +591,75 @@ function queryControllerRelease(controller, timeoutMs = 1500) {
     const timeout = window.setTimeout(() => finish(null), timeoutMs);
     channel.port1.onmessage = (event) => finish(event.data);
     try {
-      controller.postMessage({ type: "GET_RELEASE" }, [channel.port2]);
+      worker.postMessage({ type: "GET_RELEASE" }, [channel.port2]);
     } catch {
       finish(null);
     }
   });
 }
 
-async function detectServiceWorkerCompatibility() {
-  const controller = navigator.serviceWorker?.controller;
-  if (!controller) {
-    state.serviceWorkerCompatibility = "none";
-  } else {
-    state.serviceWorkerCompatibility = "checking";
-    setAudioDownloadControls(Boolean(state.audioDownload));
-    const reply = await queryControllerRelease(controller);
-    if (controller !== navigator.serviceWorker?.controller) return;
-    state.serviceWorkerCompatibility =
-      reply?.release === RELEASE_REVISION && reply?.audioCache === AUDIO_CACHE ? "current" : "outdated";
+function watchServiceWorker(worker, registration) {
+  if (!worker || watchedWorkers.has(worker)) return;
+  watchedWorkers.add(worker);
+  worker.addEventListener("statechange", () => {
+    watchServiceWorker(registration.installing, registration);
+    watchServiceWorker(registration.waiting, registration);
+    watchServiceWorker(registration.active, registration);
+    detectServiceWorkerCompatibility(registration);
+  });
+}
+
+function watchServiceWorkerRegistration(registration) {
+  if (!registration) return;
+  state.serviceWorkerRegistration = registration;
+  watchServiceWorker(registration.installing, registration);
+  watchServiceWorker(registration.waiting, registration);
+  watchServiceWorker(registration.active, registration);
+  if (watchedRegistrations.has(registration)) return;
+  watchedRegistrations.add(registration);
+  registration.addEventListener("updatefound", () => {
+    watchServiceWorker(registration.installing, registration);
+    detectServiceWorkerCompatibility(registration);
+  });
+}
+
+async function detectServiceWorkerCompatibility(registration = state.serviceWorkerRegistration) {
+  const check = ++state.serviceWorkerCheck;
+  const controller = navigator.serviceWorker?.controller || null;
+  if (!registration) {
+    try {
+      registration = await navigator.serviceWorker?.getRegistration?.();
+    } catch {
+      registration = null;
+    }
+    if (check !== state.serviceWorkerCheck) return;
   }
+  watchServiceWorkerRegistration(registration);
+
+  const worker = controller || registration?.active || null;
+  if (!worker) {
+    state.serviceWorkerCompatibility = registration?.installing || registration?.waiting ? "checking" : "none";
+    setAudioDownloadControls(Boolean(state.audioDownload));
+    updateOfflineAudioState();
+    return;
+  }
+
+  state.serviceWorkerCompatibility = "checking";
+  setAudioDownloadControls(Boolean(state.audioDownload));
+  updateOfflineAudioState();
+  const reply = await queryWorkerRelease(worker);
+  if (check !== state.serviceWorkerCheck) return;
+
+  const latestController = navigator.serviceWorker?.controller || null;
+  if (latestController !== controller || (!controller && worker !== registration?.active)) {
+    detectServiceWorkerCompatibility(registration);
+    return;
+  }
+  state.serviceWorkerCompatibility = classifyServiceWorkerReply(reply, {
+    controlled: Boolean(controller),
+    releaseRevision: RELEASE_REVISION,
+    audioCache: AUDIO_CACHE,
+  });
   setAudioDownloadControls(Boolean(state.audioDownload));
   updateOfflineAudioState();
 }
@@ -674,7 +736,11 @@ async function downloadOfflineAudio(kind) {
 
   const missingCount = urls.filter((url) => !cachedUrls.has(url)).length;
   if (missingCount === 0) {
-    await updateOfflineAudioState(`${pack.label}已完整下載。`);
+    const message =
+      state.serviceWorkerCompatibility === "installed"
+        ? `${pack.label}已完整下載；完全關閉本頁再開後即可離線播放。`
+        : `${pack.label}已完整下載。`;
+    await updateOfflineAudioState(message);
     return;
   }
 
@@ -766,15 +832,21 @@ async function downloadOfflineAudio(kind) {
       }
     }
 
+    const savedFilesNote =
+      state.serviceWorkerCompatibility === "installed"
+        ? "已完成的檔案會保留；完全關閉本頁再開後即可離線播放。"
+        : "已完成的檔案仍可離線使用。";
     const finalMessage = task.outOfSpace
-      ? `儲存空間不足，${pack.label}下載已停止；已完成的檔案仍可離線使用。`
+      ? `儲存空間不足，${pack.label}下載已停止；${savedFilesNote}`
       : task.networkInterrupted
         ? `網路中斷，${pack.label}下載已暫停；恢復連線後再按一次即可續傳。`
         : task.cancelled
-          ? "已取消下載；已完成的檔案仍可離線使用。"
+          ? `已取消下載；${savedFilesNote}`
           : failed
             ? `已儲存 ${formatNumber(urls.length - failed)} 個${pack.label}，${formatNumber(failed)} 個失敗；可再按一次重試。`
-            : `完成：${formatNumber(urls.length)} 個${pack.label}已可離線使用。`;
+            : state.serviceWorkerCompatibility === "installed"
+              ? `完成：${formatNumber(urls.length)} 個${pack.label}已下載；完全關閉本頁再開後即可離線播放。`
+              : `完成：${formatNumber(urls.length)} 個${pack.label}已可離線使用。`;
     await updateOfflineAudioState(finalMessage);
   } catch {
     elements.offlineStatus.textContent = `${pack.label}無法儲存，請確認瀏覽器空間後再試。`;
@@ -957,13 +1029,21 @@ elements.installApp.addEventListener("click", async () => {
 });
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.addEventListener("controllerchange", detectServiceWorkerCompatibility);
+  navigator.serviceWorker.addEventListener("controllerchange", () => detectServiceWorkerCompatibility());
   window.addEventListener("load", async () => {
     try {
-      await navigator.serviceWorker.register("./sw.js");
-      await navigator.serviceWorker.ready;
-      await detectServiceWorkerCompatibility();
+      const registration = await navigator.serviceWorker.register("./sw.js");
+      watchServiceWorkerRegistration(registration);
+      await detectServiceWorkerCompatibility(registration);
+      navigator.serviceWorker.ready
+        .then((readyRegistration) => {
+          watchServiceWorkerRegistration(readyRegistration);
+          detectServiceWorkerCompatibility(readyRegistration);
+        })
+        .catch(() => {});
     } catch {
+      state.serviceWorkerCompatibility = "none";
+      setAudioDownloadControls(Boolean(state.audioDownload));
       elements.offlineStatus.textContent = "離線功能目前無法啟用；查詞仍可使用。";
     }
   });

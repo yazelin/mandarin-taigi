@@ -45,10 +45,10 @@
       content="https://yazelin.github.io/mandarin-taigi/assets/og-image.png?v=3"
     />
     <meta name="twitter:image:alt" content="國台語詞語對照：這個詞，台語按怎講？" />
-    <link rel="manifest" href="./manifest.webmanifest?v=7" />
+    <link rel="manifest" href="./manifest.webmanifest?v=8" />
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./styles.css?v=7" />
+    <link rel="stylesheet" href="./styles.css?v=8" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -85,7 +85,7 @@
       </nav>
       <div class="header-actions">
         <button id="install-app" class="header-install" type="button" hidden>安裝 App</button>
-        <a class="header-link" href="#about">資料說明</a>
+        <a class="header-link" href="#about" data-app-view="about">資料說明</a>
       </div>
     </header>
 
@@ -165,7 +165,7 @@
         </div>
       </section>
 
-      <section id="about" class="about dictionary-view" aria-labelledby="about-title">
+      <section id="about" class="about dictionary-view" aria-labelledby="about-title" tabindex="-1">
         <div>
           <p class="eyebrow">知道它會什麼，也知道它不會什麼</p>
           <h2 id="about-title">這是對照辭典，不是 AI 翻譯器</h2>
@@ -219,6 +219,6 @@
     </aside>
 
     <noscript><p class="noscript">這個查詢工具需要啟用 JavaScript。</p></noscript>
-    <script type="module" src="./app.js?v=7"></script>
+    <script type="module" src="./app.js?v=8"></script>
   </body>
 </html>

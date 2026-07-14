@@ -15,7 +15,7 @@ test("learning module stays importable as an isolated feature boundary", () => {
 
 test("homepage exposes all learning routes and split offline audio controls", () => {
   const html = read("index.html");
-  for (const route of ["dictionary", "challenge", "wrongbook", "flashcards"]) {
+  for (const route of ["dictionary", "challenge", "wrongbook", "flashcards", "about"]) {
     assert.ok(html.includes(`data-app-view="${route}"`), route);
   }
   for (const id of [
@@ -54,7 +54,7 @@ test("full audio download keeps its app and worker reliability guardrails", () =
   assert.ok(app.includes("navigator.storage?.estimate?.()"));
   assert.ok(app.includes("window.confirm("));
   assert.ok(app.includes("failedBatches >= 3"));
-  assert.ok(app.includes('state.serviceWorkerCompatibility !== "current"'));
+  assert.ok(app.includes("canDownloadOfflineAudio(state.serviceWorkerCompatibility)"));
   assert.ok(worker.includes("request.headers.get(BULK_DOWNLOAD_HEADER)"));
 });
 
@@ -71,16 +71,16 @@ test("HTML and every module edge use one versioned release URL", () => {
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "7");
+  assert.equal(appRelease, "8");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /styles\.css\?v=7/);
-  assert.match(html, /app\.js\?v=7/);
-  for (const module of ["search", "speech", "learning"]) {
-    assert.ok(app.includes(`./${module}.js?v=7`), module);
+  assert.match(html, /styles\.css\?v=8/);
+  assert.match(html, /app\.js\?v=8/);
+  for (const module of ["search", "speech", "learning", "offline"]) {
+    assert.ok(app.includes(`./${module}.js?v=8`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=7"));
-  assert.ok(app.includes("./data/dictionary.json?v=7"));
-  assert.ok(app.includes("./data/mandarin-audio.json?v=7"));
+  assert.ok(learning.includes("./quiz.js?v=8"));
+  assert.ok(app.includes("./data/dictionary.json?v=8"));
+  assert.ok(app.includes("./data/mandarin-audio.json?v=8"));
   assert.ok(app.includes('register("./sw.js")'));
   assert.ok(app.includes('type: "GET_RELEASE"'));
   assert.ok(worker.includes('type !== "GET_RELEASE"'));
