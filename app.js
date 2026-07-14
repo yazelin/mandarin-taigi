@@ -4,19 +4,19 @@ import {
   groupComparisons,
   pickSuggestionTerms,
   searchTermsDetailed,
-} from "./search.js?v=12";
-import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=12";
-import { initializeLearning } from "./learning.js?v=12";
-import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=12";
-import { applyDictionaryDetails, decodeDictionaryCore } from "./dictionary-data.js?v=12";
+} from "./search.js?v=13";
+import { selectMandarinVoice, waitForMandarinVoice } from "./speech.js?v=13";
+import { initializeLearning } from "./learning.js?v=13";
+import { canDownloadOfflineAudio, classifyServiceWorkerReply } from "./offline.js?v=13";
+import { applyDictionaryDetails, decodeDictionaryCore } from "./dictionary-data.js?v=13";
 
-const RELEASE_REVISION = "12";
-const CORE_DATA_URL = "./data/dictionary-core.json?v=12";
-const DETAILS_DATA_URL = "./data/dictionary-details.json?v=12";
+const RELEASE_REVISION = "13";
+const CORE_DATA_URL = "./data/dictionary-core.json?v=13";
+const DETAILS_DATA_URL = "./data/dictionary-details.json?v=13";
 const DATA_BASE_URL = new URL(CORE_DATA_URL, window.location.href);
-const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=12";
+const MANDARIN_AUDIO_URL = "./data/mandarin-audio.json?v=13";
 const MANDARIN_AUDIO_BASE_URL = new URL(MANDARIN_AUDIO_URL, window.location.href);
-const SHELL_CACHE = "mandarin-taigi-shell-v12";
+const SHELL_CACHE = "mandarin-taigi-shell-v13";
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const OFFICIAL_ENTRY_URL = "https://sutian.moe.edu.tw/zh-hant/su/";

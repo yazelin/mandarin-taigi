@@ -79,7 +79,7 @@ a {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 1.2rem;
-  width: 100%;
+  width: min(1180px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 1.25rem 0;
 }
@@ -110,6 +110,7 @@ a {
   min-height: 44px;
   align-items: center;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .site-nav {
@@ -1121,6 +1122,10 @@ select:disabled {
 
   .header-install {
     padding-inline: 0.55rem;
+  }
+
+  .header-actions {
+    gap: 0.35rem;
   }
 
   .search-form__row {

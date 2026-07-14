@@ -1,22 +1,22 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "12";
+const RELEASE_REVISION = "13";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v12";
+const SHELL_CACHE = "mandarin-taigi-shell-v13";
 // Keep this in sync with app.js and include both official audio source versions.
 const AUDIO_CACHE = "mandarin-taigi-audio-20260713-2014_20260626";
 const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=12",
-  "./app.js?v=12",
-  "./search.js?v=12",
-  "./speech.js?v=12",
-  "./quiz.js?v=12",
-  "./learning.js?v=12",
-  "./offline.js?v=12",
-  "./dictionary-data.js?v=12",
-  "./manifest.webmanifest?v=12",
+  "./styles.css?v=13",
+  "./app.js?v=13",
+  "./search.js?v=13",
+  "./speech.js?v=13",
+  "./quiz.js?v=13",
+  "./learning.js?v=13",
+  "./offline.js?v=13",
+  "./dictionary-data.js?v=13",
+  "./manifest.webmanifest?v=13",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
@@ -27,9 +27,9 @@ const SHELL_FILES = [
 // progress, and cache only complete JSON. The worker serves the validated,
 // versioned responses cache-first but never races the app to precache them.
 const RUNTIME_DATA_FILES = [
-  "./data/dictionary-core.json?v=12",
-  "./data/dictionary-details.json?v=12",
-  "./data/mandarin-audio.json?v=12",
+  "./data/dictionary-core.json?v=13",
+  "./data/dictionary-details.json?v=13",
+  "./data/mandarin-audio.json?v=13",
 ];
 
 const SCOPE_URL = new URL(self.registration.scope);

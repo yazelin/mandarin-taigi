@@ -36,6 +36,17 @@ test("homepage exposes all learning routes and split offline audio controls", ()
   assert.equal(html.includes('id="download-audio"'), false);
 });
 
+test("desktop header shares the centered content width used by the app", () => {
+  const styles = read("styles.css");
+  const headerRule = styles.match(/\.site-header\s*\{([^}]*)\}/)?.[1] ?? "";
+  const headerLinkRule = styles.match(/\.header-link\s*\{([^}]*)\}/)?.[1] ?? "";
+
+  assert.match(headerRule, /width:\s*min\(1180px, calc\(100% - 2rem\)\);/);
+  assert.match(headerRule, /margin:\s*0 auto;/);
+  assert.doesNotMatch(headerRule, /width:\s*100%;/);
+  assert.match(headerLinkRule, /white-space:\s*nowrap;/);
+});
+
 test("app and worker agree on the persistent audio cache name", () => {
   const appCache = read("app.js").match(/const AUDIO_CACHE = "([^"]+)"/)?.[1];
   const workerCache = read("sw.js").match(/const AUDIO_CACHE = "([^"]+)"/)?.[1];
@@ -74,17 +85,17 @@ test("HTML and every module edge use one versioned release URL", () => {
   const worker = read("sw.js");
   const appRelease = app.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
   const workerRelease = worker.match(/const RELEASE_REVISION = "([^"]+)"/)?.[1];
-  assert.equal(appRelease, "12");
+  assert.equal(appRelease, "13");
   assert.equal(workerRelease, appRelease);
-  assert.match(html, /styles\.css\?v=12/);
-  assert.match(html, /app\.js\?v=12/);
+  assert.match(html, /styles\.css\?v=13/);
+  assert.match(html, /app\.js\?v=13/);
   for (const module of ["search", "speech", "learning", "offline", "dictionary-data"]) {
-    assert.ok(app.includes(`./${module}.js?v=12`), module);
+    assert.ok(app.includes(`./${module}.js?v=13`), module);
   }
-  assert.ok(learning.includes("./quiz.js?v=12"));
-  assert.ok(app.includes("./data/dictionary-core.json?v=12"));
-  assert.ok(app.includes("./data/dictionary-details.json?v=12"));
-  assert.ok(app.includes("./data/mandarin-audio.json?v=12"));
+  assert.ok(learning.includes("./quiz.js?v=13"));
+  assert.ok(app.includes("./data/dictionary-core.json?v=13"));
+  assert.ok(app.includes("./data/dictionary-details.json?v=13"));
+  assert.ok(app.includes("./data/mandarin-audio.json?v=13"));
   assert.equal(app.includes("./data/dictionary.json"), false);
   assert.ok(app.includes('register("./sw.js")'));
   assert.ok(app.includes('type: "GET_RELEASE"'));
