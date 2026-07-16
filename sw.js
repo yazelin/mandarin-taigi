@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "15";
+const RELEASE_REVISION = "16";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v18";
+const SHELL_CACHE = "mandarin-taigi-shell-v19";
 // Dictionary bytes change independently from the app shell. Keeping this cache
 // on v13 means a UI-only release never forces the same validated JSON to reload.
 const DATA_CACHE = "mandarin-taigi-data-v13";
@@ -12,16 +12,16 @@ const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=15",
-  "./app.js?v=15",
-  "./search.js?v=15",
-  "./speech.js?v=15",
-  "./quiz.js?v=15",
-  "./learning.js?v=15",
-  "./offline.js?v=15",
-  "./dictionary-data.js?v=15",
-  "./data-loader.js?v=15",
-  "./manifest.webmanifest?v=15",
+  "./styles.css?v=16",
+  "./app.js?v=16",
+  "./search.js?v=16",
+  "./speech.js?v=16",
+  "./quiz.js?v=16",
+  "./learning.js?v=16",
+  "./offline.js?v=16",
+  "./dictionary-data.js?v=16",
+  "./data-loader.js?v=16",
+  "./manifest.webmanifest?v=16",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
