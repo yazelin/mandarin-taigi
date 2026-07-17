@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "mandarin-taigi-";
 const RELEASE_REVISION = "16";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v19";
+const SHELL_CACHE = "mandarin-taigi-shell-v20";
 // Dictionary bytes change independently from the app shell. Keeping this cache
 // on v13 means a UI-only release never forces the same validated JSON to reload.
 const DATA_CACHE = "mandarin-taigi-data-v13";
