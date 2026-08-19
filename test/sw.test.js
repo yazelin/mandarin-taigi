@@ -8,7 +8,7 @@ import vm from "node:vm";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workerSource = readFileSync(resolve(repositoryRoot, "sw.js"), "utf8");
 const scope = "https://example.test/mandarin-taigi/";
-const shellCache = "mandarin-taigi-shell-v15";
+const shellCache = "mandarin-taigi-shell-v27";
 const dataCache = "mandarin-taigi-data-v13";
 const legacyShellCache = "mandarin-taigi-shell-v13";
 const audioCache = "mandarin-taigi-audio-20260713-2014_20260626";
