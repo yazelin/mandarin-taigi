@@ -52,5 +52,9 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "screenshots": [
+    { "src": "./screenshot-mobile.webp", "sizes": "540x1170", "type": "image/webp", "form_factor": "narrow", "label": "手機上的國台語詞語對照查詢畫面" },
+    { "src": "./screenshot-desktop.webp", "sizes": "1280x800", "type": "image/webp", "form_factor": "wide", "label": "桌機上的國台語詞語對照查詢畫面" }
   ]
 }

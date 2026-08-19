@@ -1,7 +1,7 @@
 const CACHE_PREFIX = "mandarin-taigi-";
-const RELEASE_REVISION = "16";
+const RELEASE_REVISION = "15";
 // Bump this cache name and every ?v= release URL together.
-const SHELL_CACHE = "mandarin-taigi-shell-v26";
+const SHELL_CACHE = "mandarin-taigi-shell-v27";
 // Dictionary bytes change independently from the app shell. Keeping this cache
 // on v13 means a UI-only release never forces the same validated JSON to reload.
 const DATA_CACHE = "mandarin-taigi-data-v13";
@@ -12,16 +12,16 @@ const BULK_DOWNLOAD_HEADER = "x-mandarin-taigi-bulk-download";
 const SHELL_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=16",
-  "./app.js?v=16",
-  "./search.js?v=16",
-  "./speech.js?v=16",
-  "./quiz.js?v=16",
-  "./learning.js?v=16",
-  "./offline.js?v=16",
-  "./dictionary-data.js?v=16",
-  "./data-loader.js?v=16",
-  "./manifest.webmanifest?v=16",
+  "./styles.css?v=15",
+  "./app.js?v=15",
+  "./search.js?v=15",
+  "./speech.js?v=15",
+  "./quiz.js?v=15",
+  "./learning.js?v=15",
+  "./offline.js?v=15",
+  "./dictionary-data.js?v=15",
+  "./data-loader.js?v=15",
+  "./manifest.webmanifest?v=15",
   "./assets/icon.svg",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
@@ -185,7 +185,10 @@ self.addEventListener("message", (event) => {
 async function matchBestEffort(cacheName, request) {
   try {
     const cache = await caches.open(cacheName);
-    return await cache.match(request);
+    // ignoreVary is harmless here and guards against GitHub Pages' Vary:
+    // Accept-Encoding; ignoreSearch lets cache-first shell/data lookups hit
+    // regardless of ?v= release query, so a stale ?v= request still resolves.
+    return await cache.match(request, { ignoreSearch: true, ignoreVary: true });
   } catch {
     return undefined;
   }
